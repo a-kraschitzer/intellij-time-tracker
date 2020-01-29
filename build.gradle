@@ -13,9 +13,34 @@ repositories {
     mavenCentral()
 }
 
+ext {
+    jerseyVersion = '2.30'
+    jacksonDatatypeJTSVersion = '2.4'
+    slf4jVersion = '1.7.30'
+    lombokVersion = '1.18.10'
+}
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+    implementation group: 'org.glassfish.jersey.core', name: 'jersey-client', version: jerseyVersion
+    implementation group: 'org.glassfish.jersey.inject', name:  'jersey-hk2', version:  jerseyVersion
+    implementation group: 'org.glassfish.jersey.media', name: 'jersey-media-json-jackson', version: jerseyVersion
+
+
+    // tools
+    annotationProcessor group: 'org.projectlombok', name: 'lombok', version: lombokVersion
+    compileOnly group: 'org.projectlombok', name: 'lombok', version: lombokVersion
+
+    // SLF4J
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: slf4jVersion
+
+    // validation
+    compile group: 'javax.validation', name: 'validation-api', version: '2.0.1.Final'
+
+    //parsing
+    implementation group: 'com.bedatadriven', name: 'jackson-datatype-jts', version: jacksonDatatypeJTSVersion
+
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
