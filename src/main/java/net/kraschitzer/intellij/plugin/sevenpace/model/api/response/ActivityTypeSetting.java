@@ -1,8 +1,10 @@
 package net.kraschitzer.intellij.plugin.sevenpace.model.api.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ActivityTypeSetting {
 
     private String id;
@@ -10,5 +12,9 @@ public class ActivityTypeSetting {
     private String name;
     private Boolean isDefault;
     private Boolean isNotSet;
+
+    public String toString() {
+        return name;
+    }
 
 }

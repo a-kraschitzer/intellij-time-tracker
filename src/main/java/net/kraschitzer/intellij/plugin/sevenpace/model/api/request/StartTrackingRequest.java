@@ -10,11 +10,16 @@ import javax.validation.constraints.NotNull;
 public class StartTrackingRequest {
 
     @NotNull
-    private Integer timeZone;
+    @Builder.Default
+    private Integer timeZone = 0;
     private Integer tfsId;
+
     @NotNull
-    private String remark;
+    @Builder.Default
+    private String remark = "";
+
     @NotNull
-    private String activityTypeId;
+    @Builder.Default
+    private String activityTypeId = "";
 
 }

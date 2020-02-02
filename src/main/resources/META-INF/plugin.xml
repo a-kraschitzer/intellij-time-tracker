@@ -19,6 +19,9 @@
                     secondary="true"
                     icon="/net/kraschitzer/intellij/plugin/sevenpace/icon.png"
                     factoryClass="net.kraschitzer.intellij.plugin.sevenpace.view.SevenPaceToolWindowFactory"/>
+        <applicationService serviceInterface="net.kraschitzer.intellij.plugin.sevenpace.communication.ICommunicator"
+                            serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.communication.Communicator"/>
+        <applicationService serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.NotificationManager"/>
     </extensions>
 
     <actions>

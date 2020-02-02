@@ -1,8 +1,10 @@
 package net.kraschitzer.intellij.plugin.sevenpace.model.api.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UserInfo {
 
     private String userId;
@@ -17,5 +19,6 @@ public class UserInfo {
     private String encodedImage;
     private String applicationVersion;
     private String teamServicesUrl;
+    private String projectId;
 
 }

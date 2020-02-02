@@ -1,5 +1,7 @@
 package net.kraschitzer.intellij.plugin.sevenpace.model.api.response.enums;
 
+import java.util.EnumSet;
+
 public enum TimeTrackingState {
 
     /**
@@ -32,5 +34,14 @@ public enum TimeTrackingState {
 
     TimeTrackingState(int value) {
         this.value = value;
+    }
+
+    public static TimeTrackingState getByValue(int value) {
+        for (TimeTrackingState tts : EnumSet.allOf(TimeTrackingState.class)) {
+            if (tts.value == value) {
+                return tts;
+            }
+        }
+        return null;
     }
 }

@@ -1,39 +1,48 @@
 package net.kraschitzer.intellij.plugin.sevenpace.communication;
 
-import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.CommunicatorNotInitializedException;
+import com.intellij.openapi.components.ServiceManager;
+import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.CommunicatorException;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.request.SelectWorkItemRequest;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.request.StartTrackingRequest;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.request.UpdateTrackRequest;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.*;
+import net.kraschitzer.intellij.plugin.sevenpace.model.enums.Reason;
 
 public interface ICommunicator {
+
+    static ICommunicator getInstance() {
+        return ServiceManager.getService(ICommunicator.class);
+    }
+
+    void initialize() throws CommunicatorException;
 
     PinContext pinCreate();
 
     PinStatus pinStatus(String secret);
 
-    Token token(String secret);
+    Token token(String secret) throws CommunicatorException;
 
-    Token refreshToken(String refreshToken);
+    Token refreshToken(String refreshToken) throws CommunicatorException;
 
-    TrackingStateModel getCurrentState(boolean expand) throws CommunicatorNotInitializedException;
+    TrackingStateModel getCurrentState(boolean expand) throws CommunicatorException;
 
-    Track selectWorkItem(SelectWorkItemRequest selectWorkItemRequest);
+    Track selectWorkItem(SelectWorkItemRequest selectWorkItemRequest) throws CommunicatorException;
 
-    LatestWorkLogsModel getLatestWorkLogs(int count);
+    LatestWorkLogsModel getLatestWorkLogs(int count) throws CommunicatorException;
 
-    TrackingStateModel startTracking(StartTrackingRequest startTrackingRequest);
+    TrackingStateModel startTracking(StartTrackingRequest startTrackingRequest) throws CommunicatorException;
 
-    TrackingStateModel stopTracking(int reason);
+    TrackingStateModel stopTracking(Reason reason) throws CommunicatorException;
 
-    TrackingStateModel notifyNextIdleCheck(int selectedOption);
+    TrackingStateModel notifyNextIdleCheck(int selectedOption) throws CommunicatorException;
 
-    TrackingStateModel notifyOfActivity();
+    TrackingStateModel notifyOfActivity() throws CommunicatorException;
 
-    TrackingStateModel updateTrack(UpdateTrackRequest updateTrackRequest);
+    TrackingStateModel updateTrack(UpdateTrackRequest updateTrackRequest) throws CommunicatorException;
 
-    SearchResultModel searchWorkItem(String workItemIdOrTitle);
+    SearchResultModel searchWorkItem(String workItemIdOrTitle) throws CommunicatorException;
 
-    SearchResultModel searchWokrItemByModel(String workItemIdOrTitle);
+    SearchResultModel searchWorkItemByModel(String workItemIdOrTitle) throws CommunicatorException;
 
+    void resetInitialization();
 }
