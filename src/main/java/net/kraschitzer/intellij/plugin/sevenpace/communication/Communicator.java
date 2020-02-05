@@ -21,8 +21,6 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.*;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -42,8 +40,8 @@ public class Communicator implements ICommunicator {
     private TrackingStateModel currentState;
     private String protocolAddress;
 
-    private boolean initialized;
-    private boolean authenticated;
+    private boolean initialized = false;
+    private boolean authenticated = false;
 
     private Communicator() {
         System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
@@ -53,33 +51,36 @@ public class Communicator implements ICommunicator {
             "7Pace Timetracker Notifications", NotificationDisplayType.BALLOON, true);
 
     public void initialize() throws CommunicatorException {
-        initialized = false;
-        authenticated = false;
+        if (!initialized) {
+            authenticated = false;
 
-        this.props = PropertiesComponent.getInstance();
-        String apiAddress = props.getValue(SettingKeys.URL);
+            this.props = PropertiesComponent.getInstance();
+            String apiAddress = props.getValue(SettingKeys.URL);
 
-        log.debug("Initializing with apiAddress: {}", apiAddress);
+            log.debug("Initializing with apiAddress: {}", apiAddress);
 
-        if (StringUtils.isNotBlank(apiAddress)) {
-            client = ClientBuilder.newClient();
-            try {
-                InetAddress.getByName(apiAddress);
-            } catch (UnknownHostException e) {
-                throw new CommunicationHostUnknownException();
+            if (StringUtils.isBlank(apiAddress)) {
+                throw new CommunicatorNotInitializedException("Missing apiAddress");
             }
+
+            client = ClientBuilder.newClient();
             protocolAddress = PROTOCOL + apiAddress;
             initialized = true;
+        }
+    }
 
+    public void authenticate() throws CommunicatorException {
+        if (!authenticated) {
             String accessToken = props.getValue(SettingKeys.ACCESS_TOKEN);
-            if (StringUtils.isNotBlank(accessToken)) {
-                try {
-                    refreshTokenIfNecessary();
-                    currentState = getCurrentState(true);
-                    authenticated = true;
-                } catch (CommunicatorNotInitializedException e) {
-                    authenticated = false;
-                }
+            if (StringUtils.isBlank(accessToken)) {
+                throw new CommunicatorNotAuthenticatedException();
+            }
+            try {
+                refreshTokenIfNecessary();
+                currentState = getCurrentStateInitialized(true);
+                authenticated = true;
+            } catch (CommunicatorNotInitializedException e) {
+                authenticated = false;
             }
         }
     }
@@ -129,8 +130,6 @@ public class Communicator implements ICommunicator {
                 .queryParam("api-version", "2.1").request();
         Invocation in = invBuilder
                 .accept(MediaType.APPLICATION_JSON)
-//                .header("Content-Type", MediaType.APPLICATION_JSON)
-//                .header("Content-Length", secret.length() + 2)
                 .buildPost(Entity.json(secret));
         Response response = in.invoke();
         if (response.getStatus() - 200 < 100) {
@@ -170,51 +169,64 @@ public class Communicator implements ICommunicator {
     @Override
     public TrackingStateModel getCurrentState(boolean expand) throws CommunicatorException {
         checkInitialization();
+        return getCurrentStateInitialized(expand);
+    }
+
+    private TrackingStateModel getCurrentStateInitialized(boolean expand) throws CommunicatorException {
         return apiGet("/tracking/client/current/" + expand, TrackingStateModel.class);
     }
 
     @Override
     public Track selectWorkItem(SelectWorkItemRequest selectWorkItemRequest) throws CommunicatorException {
+        checkInitialization();
         return apiPostJson("/tracking/client/selected", selectWorkItemRequest, Track.class);
     }
 
     @Override
     public LatestWorkLogsModel getLatestWorkLogs(int count) throws CommunicatorException {
+        checkInitialization();
         return apiGet("/tracking/client/latest/10", LatestWorkLogsModel.class);
     }
 
     @Override
     public TrackingStateModel startTracking(StartTrackingRequest startTrackingRequest) throws CommunicatorException {
+        checkInitialization();
         return apiPostJson("/tracking/client/startTracking", startTrackingRequest, TrackingStateModel.class);
     }
 
     @Override
     public TrackingStateModel stopTracking(Reason reason) throws CommunicatorException {
+        checkInitialization();
         return apiPostJson("/tracking/client/stopTracking/" + reason.ordinal(), "", TrackingStateModel.class);
     }
 
     @Override
     public TrackingStateModel notifyNextIdleCheck(int selectedOption) throws CommunicatorException {
+        checkInitialization();
         return null;
     }
 
     @Override
     public TrackingStateModel notifyOfActivity() throws CommunicatorException {
+        checkInitialization();
         return null;
     }
 
     @Override
     public TrackingStateModel updateTrack(UpdateTrackRequest updateTrackRequest) throws CommunicatorException {
+        checkInitialization();
         return null;
     }
 
     @Override
     public SearchResultModel searchWorkItem(String workItemIdOrTitle) throws CommunicatorException {
+        checkInitialization();
         return apiPostJson("/tracking/client/search", workItemIdOrTitle, SearchResultModel.class);
     }
 
     @Override
     public SearchResultModel searchWorkItemByModel(String workItemIdOrTitle) throws CommunicatorException {
+        checkInitialization();
         return apiPostJson("/tracking/client/searchByQuery", "{\"query\": \"" + workItemIdOrTitle + "\"}", SearchResultModel.class);
     }
 
@@ -222,13 +234,6 @@ public class Communicator implements ICommunicator {
     public void resetInitialization() {
         initialized = false;
         authenticated = false;
-    }
-
-    public TrackingStateModel getCurrentState() throws CommunicatorException {
-        if (currentState == null) {
-            this.currentState = getCurrentState(true);
-        }
-        return currentState;
     }
 
     public boolean isAuthenticated() {
@@ -277,7 +282,7 @@ public class Communicator implements ICommunicator {
     }
 
     private void checkInitialization() throws CommunicatorException {
-        if (!initialized) {
+        if (!initialized || !authenticated) {
             initialize();
         }
     }

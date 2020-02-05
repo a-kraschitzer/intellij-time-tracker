@@ -19,7 +19,7 @@ public class NotificationManager {
     }
 
     private final NotificationGroup localNotificationGroup = new NotificationGroup(
-            "7Pace Timetracker Notifications", NotificationDisplayType.BALLOON, true);
+            "7Pace Timetracker Notifications", NotificationDisplayType.TOOL_WINDOW, true);
 
     public void sendSettingNotification(String msg) {
         ApplicationManager.getApplication().invokeLater(() -> {

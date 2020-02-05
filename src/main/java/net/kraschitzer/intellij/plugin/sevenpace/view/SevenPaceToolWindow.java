@@ -53,7 +53,6 @@ public class SevenPaceToolWindow {
     private JSeparator separatorVertical;
 
     private ICommunicator communicator;
-    private NotificationManager notificationManager;
     private Map<String, ImageIcon> icons;
     private Map<String, String> activityTypes;
     private Map<String, URI> workItemRecentUris;
@@ -63,7 +62,6 @@ public class SevenPaceToolWindow {
 
 
     public SevenPaceToolWindow(ToolWindow toolWindow) {
-        notificationManager = NotificationManager.getInstance();
         communicator = ICommunicator.getInstance();
 
         workItemRecentUris = new HashMap<>();
@@ -77,7 +75,7 @@ public class SevenPaceToolWindow {
             loadActivityTypes(currentState.getSettings());
             updateCurrentTrackedItem();
         } catch (CommunicatorNotInitializedException e) {
-            notificationManager.sendSettingNotification("Communicator not initialized.");
+            NotificationManager.getInstance().sendSettingNotification("Communicator not initialized.");
             log.info("Communicator hasn't been initialized.");
         } catch (CommunicatorException e) {
             e.printStackTrace();
@@ -161,7 +159,7 @@ public class SevenPaceToolWindow {
                         uri = workItemSearchUris.get(selectedWorkItemId);
                     }
                     if (uri == null) {
-                        notificationManager.sendWarningNotification("Failed to open URL.", "No URL was found for the selected Work Item.");
+                        NotificationManager.getInstance().sendWarningNotification("Failed to open URL.", "No URL was found for the selected Work Item.");
                     }
                     try {
                         if (Desktop.isDesktopSupported()) {
@@ -203,7 +201,7 @@ public class SevenPaceToolWindow {
     }
 
     private void loadIcons() {
-        String path = "/net/kraschitzer/intellij/plugin/sevenpace/workItems/";
+        String path = "/net/kraschitzer/intellij/plugin/sevenpace/icons/";
         icons = new HashMap<>();
         icons.put("Bug", new ImageIcon(getClass().getResource(path + "bug.png")));
         icons.put("Epic", new ImageIcon(getClass().getResource(path + "epic.png")));
@@ -348,11 +346,11 @@ public class SevenPaceToolWindow {
                 switch (currentState.getTrackSettings().getResponseState()) {
                     case Warning:
                     case Error:
-                        notificationManager.sendWarningNotification("Failed to start tracking " + selectedWorkItemId + ".",
+                        NotificationManager.getInstance().sendWarningNotification("Failed to start tracking " + selectedWorkItemId + ".",
                                 currentState.getTrackSettings().getResponseMessage());
                         break;
                     case AuthError:
-                        notificationManager.sendSettingNotification("Auth Error on starting a Tracking.");
+                        NotificationManager.getInstance().sendSettingNotification("Auth Error on starting a Tracking.");
                         break;
                 }
                 return;

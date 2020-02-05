@@ -4,7 +4,6 @@ import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.options.ConfigurationException;
 import lombok.extern.slf4j.Slf4j;
-import net.kraschitzer.intellij.plugin.sevenpace.NotificationManager;
 import net.kraschitzer.intellij.plugin.sevenpace.communication.ICommunicator;
 import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.CommunicatorException;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.*;
@@ -14,6 +13,10 @@ import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.ZoneOffset;
 
 @Slf4j
@@ -27,24 +30,42 @@ public class Settings implements Configurable {
     private JTextField textFieldName;
     private JTextField textFieldEmail;
     private JTextField textFieldProjectId;
+    private JLabel labelError;
 
 
     private final ICommunicator communicator;
-    private final NotificationManager notificationManager;
     private PropertiesComponent props;
 
     private String url;
 
     public Settings() {
         buttonGeneratePin.addActionListener(e -> generatePin());
-        notificationManager = NotificationManager.getInstance();
-        props = PropertiesComponent.getInstance();
+        textFieldUrl.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                resetError();
+            }
 
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                resetError();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                resetError();
+            }
+        });
+        props = PropertiesComponent.getInstance();
         communicator = ICommunicator.getInstance();
 
         url = props.getValue(SettingKeys.URL);
         textFieldUrl.setText(url != null ? url : "");
-
+        try {
+            communicator.initialize();
+            communicator.authenticate();
+        } catch (Exception ex) {
+        }
         populateUserInformation();
     }
 
@@ -68,16 +89,25 @@ public class Settings implements Configurable {
 
     @Override
     public void apply() throws ConfigurationException {
-        url = textFieldUrl.getText();
-        props.setValue(SettingKeys.URL, url);
+        saveInput();
         clearCachedInfo();
         try {
             communicator.resetInitialization();
             communicator.initialize();
         } catch (CommunicatorException e) {
-            notificationManager.sendSettingNotification("Failed to initialize communicator.");
-            throw new ConfigurationException(e.getMessage());
+            setError("Failed to initialize communicator.");
+            return;
         }
+    }
+
+    private void saveInput() throws ConfigurationException {
+        url = textFieldUrl.getText();
+        try {
+            InetAddress.getByName(url);
+        } catch (UnknownHostException e) {
+            throw new ConfigurationException("The given url '" + url + "' is invalid!");
+        }
+        props.setValue(SettingKeys.URL, url);
     }
 
     private void createUIComponents() {
@@ -86,12 +116,19 @@ public class Settings implements Configurable {
 
     private void generatePin() {
         try {
-            apply();
-        } catch (ConfigurationException ex) {
+            saveInput();
+            clearCachedInfo();
+            communicator.resetInitialization();
+            communicator.initialize();
+        } catch (ConfigurationException e) {
+            setError("The given url '" + url + "' is invalid!");
+            return;
+        } catch (CommunicatorException e) {
+            setError("Failed to initialize communicator.");
             return;
         }
+
         final PinContext pin = communicator.pinCreate();
-        //log.debug("Retrieved new PIN: {} and secret: {}...", pin.getPin(), pin.getSecret().substring(0, 20));
         final SampleDialogWrapper dialog = new SampleDialogWrapper(pin.getPin());
         Thread t = new Thread(() -> {
             PinStatus status = communicator.pinStatus(pin.getSecret());
@@ -149,5 +186,13 @@ public class Settings implements Configurable {
         props.setValue(SettingKeys.ACCESS_TOKEN, "");
         props.setValue(SettingKeys.REFRESH_TOKEN, "");
         props.setValue(SettingKeys.EXPIRES, "");
+    }
+
+    private void setError(String msg) {
+        labelError.setText(msg);
+    }
+
+    private void resetError() {
+        labelError.setText("");
     }
 }

@@ -1,6 +1,6 @@
 package net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions;
 
-public class CommunicatorException extends Throwable {
+public class CommunicatorException extends Exception {
 
     public CommunicatorException() {
         super();

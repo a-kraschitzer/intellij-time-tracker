@@ -16,6 +16,8 @@ public interface ICommunicator {
 
     void initialize() throws CommunicatorException;
 
+    void authenticate() throws CommunicatorException;
+
     PinContext pinCreate();
 
     PinStatus pinStatus(String secret);

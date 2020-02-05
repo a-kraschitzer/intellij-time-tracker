@@ -1,15 +1,12 @@
 <idea-plugin>
     <id>net.kraschitzer.intellij.plugin.sevenpace.7pace-intellij-plugin</id>
-    <name>Plugin display name here</name>
-    <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">YourCompany</vendor>
+    <name>7pace Time Tracker</name>
+    <vendor url="https://github.com/a-kraschitzer">Andreas Kraschitzer</vendor>
 
     <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
+    This plugin utilizes the 7pace time tracker open REST API to facilitate the tracking of work items from within the IntelliJ IDE.
     ]]></description>
 
-    <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
-         on how to target different products -->
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
@@ -17,58 +14,10 @@
         <toolWindow id="7PaceToolWindow"
                     anchor="bottom"
                     secondary="true"
-                    icon="/net/kraschitzer/intellij/plugin/sevenpace/icon.png"
+                    icon="/net/kraschitzer/intellij/plugin/sevenpace/icons/sevenicon.png"
                     factoryClass="net.kraschitzer.intellij.plugin.sevenpace.view.SevenPaceToolWindowFactory"/>
         <applicationService serviceInterface="net.kraschitzer.intellij.plugin.sevenpace.communication.ICommunicator"
                             serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.communication.Communicator"/>
         <applicationService serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.NotificationManager"/>
     </extensions>
-
-    <actions>
-        <!-- Add your actions here -->
-        <action id="net.kraschitzer.intellij.plugin.sevenpace.PopupDialogAction"
-                class="net.kraschitzer.intellij.plugin.sevenpace.PopupDialogAction" text="Pop Dialog Action"
-                description="example">
-            <add-to-group group-id="ToolsMenu" anchor="first"/>
-        </action>
-        <action id="org.intellij.sdk.action.PopupDialogAction"
-                class="net.kraschitzer.intellij.plugin.sevenpace.PopupDialogAction"
-                text="Pop Dialog Action" description="SDK action example">
-            <keyboard-shortcut first-keystroke="control alt A" second-keystroke="C" keymap="$default"/>
-            <mouse-shortcut keystroke="control button3 doubleClick" keymap="$default"/>
-            <add-to-group group-id="ToolsMenu" anchor="first"/>
-        </action>
-        <!-- All of the following menu groups add the action PopupDialogAction to menus in different ways.
-              Note that even though these groups reuse the same action class, in each use the action ids are unique. -->
-        <!-- GroupedActions demonstrates declaring an action group using the default ActionGroup implementation provided by the
-              IntelliJ Platform framework. (Note the lack of a group "class" attribute.) GroupedActions gets inserted after PopupDialogAction
-              in the Tools menu. Because the group's implementation is default, it cannot impose enable/disable conditions. Instead it
-              must rely on the conditions imposed by the parent menu where it is inserted. It declares one action in the group. -->
-        <group id="org.intellij.sdk.action.GroupedActions" text="Static Grouped Actions" popup="true">
-            <add-to-group group-id="ToolsMenu" anchor="after"
-                          relative-to-action="org.intellij.sdk.action.PopupDialogAction"/>
-            <action class="net.kraschitzer.intellij.plugin.sevenpace.PopupDialogAction"
-                    id=" org.intellij.sdk.action.GroupPopDialogAction"
-                    text="A Group Action" description="SDK static grouped action example">
-            </action>
-        </group>
-        <!-- CustomDefaultActionGroup demonstrates declaring an action group based on a ActionGroup class supplied by this plugin.
-              This group is to be inserted atop the Editor Popup Menu. It declares one action in the group. -->
-        <group id="org.intellij.sdk.action.CustomDefaultActionGroup"
-               class="net.kraschitzer.intellij.plugin.sevenpace.CustomDefaultActionGroup" popup="true"
-               text="Popup Grouped Actions" description="Custom defaultActionGroup demo">
-            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
-            <action class="net.kraschitzer.intellij.plugin.sevenpace.PopupDialogAction"
-                    id="org.intellij.sdk.action.CustomGroupedAction"
-                    text="A Popup Action" description="SDK popup grouped action example"/>
-        </group>
-        <!-- DynamicActionGroup demonstrates declaring an action group without a static action declaration.
-              An action is added to the group programmatically in the DynamicActionGroup implementation. -->
-        <group id="org.intellij.sdk.action.DynamicActionGroup"
-               class="net.kraschitzer.intellij.plugin.sevenpace.DynamicActionGroup" popup="true"
-               text="Dynamically Grouped Actions" description="SDK dynamically grouped action example">
-            <add-to-group group-id="ToolsMenu" anchor="after"
-                          relative-to-action="org.intellij.sdk.action.GroupedActions"/>
-        </group>
-    </actions>
 </idea-plugin>
