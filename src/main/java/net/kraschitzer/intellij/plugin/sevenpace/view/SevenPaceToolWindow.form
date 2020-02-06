@@ -118,7 +118,7 @@
                 <properties/>
                 <border type="none"/>
                 <children>
-                  <component id="b4ba8" class="javax.swing.JTable" binding="tableWorkItemsFavorites">
+                  <component id="b4ba8" class="javax.swing.JTable" binding="tableWorkItemsFavourites">
                     <constraints/>
                     <properties/>
                   </component>

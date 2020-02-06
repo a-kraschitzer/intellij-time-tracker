@@ -34,9 +34,10 @@ public class RecentTableModel extends DefaultTableModel {
     public Class<?> getColumnClass(int column) {
         switch (column) {
             case 0:
-                return Integer.class;
-            case 1:
+            case 2:
                 return ImageIcon.class;
+            case 1:
+                return Integer.class;
             default:
                 return String.class;
         }

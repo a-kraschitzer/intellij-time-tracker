@@ -19,5 +19,6 @@
         <applicationService serviceInterface="net.kraschitzer.intellij.plugin.sevenpace.communication.ICommunicator"
                             serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.communication.Communicator"/>
         <applicationService serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.NotificationManager"/>
+        <applicationService serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.persistence.Favourites"/>
     </extensions>
 </idea-plugin>

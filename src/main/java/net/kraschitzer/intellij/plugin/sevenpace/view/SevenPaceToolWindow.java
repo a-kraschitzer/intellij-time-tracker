@@ -1,5 +1,6 @@
 package net.kraschitzer.intellij.plugin.sevenpace.view;
 
+import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.wm.ToolWindow;
 import lombok.extern.slf4j.Slf4j;
 import net.kraschitzer.intellij.plugin.sevenpace.NotificationManager;
@@ -12,6 +13,7 @@ import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.*;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.enums.ResponseState;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.enums.TimeTrackingState;
 import net.kraschitzer.intellij.plugin.sevenpace.model.enums.Reason;
+import net.kraschitzer.intellij.plugin.sevenpace.persistence.Favourites;
 import net.kraschitzer.intellij.plugin.sevenpace.utils.IntegerDocumentFilter;
 import org.apache.commons.lang.StringUtils;
 
@@ -45,7 +47,7 @@ public class SevenPaceToolWindow {
 
     private JTable tableWorkItemsRecent;
     private JTable tableWorkItemsMine;
-    private JTable tableWorkItemsFavorites;
+    private JTable tableWorkItemsFavourites;
     private JTable tableWorkItemsSearch;
 
     private JPanel contentPanel;
@@ -56,17 +58,20 @@ public class SevenPaceToolWindow {
     private Map<String, ImageIcon> icons;
     private Map<String, String> activityTypes;
     private Map<String, URI> workItemRecentUris;
+    private Map<String, URI> workItemFavoriteUris;
     private Map<String, URI> workItemSearchUris;
 
     private TrackingStateModel currentState;
+
+    private Favourites favourites = ServiceManager.getService(Favourites.class);
 
 
     public SevenPaceToolWindow(ToolWindow toolWindow) {
         communicator = ICommunicator.getInstance();
 
         workItemRecentUris = new HashMap<>();
+        workItemFavoriteUris = new HashMap<>();
         workItemSearchUris = new HashMap<>();
-
         loadIcons();
         initializeComponents();
 
@@ -96,6 +101,7 @@ public class SevenPaceToolWindow {
         buttonStartTracking.addActionListener(this::startTracking);
         buttonStopTracking.addActionListener(this::stopTrackingCurrent);
         buttonSearchWorkItems.addActionListener(this::searchWorkItems);
+        textFieldSearchWorkItems.addActionListener(this::searchWorkItems);
         labelCurrentTrackItemDescription.addMouseListener(new MouseListener() {
 
             @Override
@@ -136,11 +142,14 @@ public class SevenPaceToolWindow {
                 JTabbedPane pane = (JTabbedPane) e.getSource();
                 if (pane.getSelectedIndex() == 0) {
                     loadRecentItems();
+                } else if (pane.getSelectedIndex() == 2) {
+                    loadFavouriteItems();
                 }
             }
         });
 
         attachTableSelectionListener(tableWorkItemsRecent);
+        attachTableSelectionListener(tableWorkItemsFavourites);
         attachTableSelectionListener(tableWorkItemsSearch);
     }
 
@@ -148,22 +157,37 @@ public class SevenPaceToolWindow {
         table.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                String selectedWorkItemId = table.getValueAt(table.getSelectedRow(), 0).toString();
+                String selectedWorkItemId = table.getValueAt(table.getSelectedRow(), 1).toString();
                 textFieldSelectedWorkItem.setText(selectedWorkItemId);
 
-                URI uri = null;
-                if (table.getSelectedColumn() == 3) {
-                    if (table == tableWorkItemsRecent) {
-                        uri = workItemRecentUris.get(selectedWorkItemId);
-                    } else if (table == tableWorkItemsSearch) {
-                        uri = workItemSearchUris.get(selectedWorkItemId);
+                URI selectedUri = null;
+                if (table == tableWorkItemsRecent) {
+                    selectedUri = workItemRecentUris.get(selectedWorkItemId);
+                } else if (table == tableWorkItemsFavourites) {
+                    selectedUri = workItemFavoriteUris.get(selectedWorkItemId);
+                } else if (table == tableWorkItemsSearch) {
+                    selectedUri = workItemSearchUris.get(selectedWorkItemId);
+                }
+
+                if (table.getSelectedColumn() == 0) {
+                    if (favourites.ids.contains(selectedWorkItemId)) {
+                        favourites.removeFavourite(selectedWorkItemId);
+                        table.setValueAt(icons.get("Favourite_Out"), table.getSelectedRow(), table.getSelectedColumn());
+                    } else {
+                        favourites.addFavourite(selectedWorkItemId,
+                                table.getValueAt(table.getSelectedRow(), 3).toString(),
+                                table.getValueAt(table.getSelectedRow(), 4).toString(),
+                                selectedUri != null ? selectedUri.toString() : "");
+                        table.setValueAt(icons.get("Favourite_In"), table.getSelectedRow(), table.getSelectedColumn());
                     }
-                    if (uri == null) {
+                }
+                if (table.getSelectedColumn() == 4) {
+                    if (selectedUri == null) {
                         NotificationManager.getInstance().sendWarningNotification("Failed to open URL.", "No URL was found for the selected Work Item.");
                     }
                     try {
                         if (Desktop.isDesktopSupported()) {
-                            Desktop.getDesktop().browse(uri);
+                            Desktop.getDesktop().browse(selectedUri);
                         }
                     } catch (Exception ex) {
                         log.debug("Failed to open external work item link for id '" + selectedWorkItemId + "' with error: " + ex.getMessage());
@@ -211,6 +235,8 @@ public class SevenPaceToolWindow {
         icons.put("Feature", new ImageIcon(getClass().getResource(path + "feature.png")));
         icons.put("Task_Start", new ImageIcon(getClass().getResource(path + "start.png")));
         icons.put("Task_Stop", new ImageIcon(getClass().getResource(path + "stop.png")));
+        icons.put("Favourite_In", new ImageIcon(getClass().getResource(path + "star2.png")));
+        icons.put("Favourite_Out", new ImageIcon(getClass().getResource(path + "star_empty2.png")));
     }
     //endregion
 
@@ -218,6 +244,7 @@ public class SevenPaceToolWindow {
     private void loadSearchResults(SearchResultModel searchResultModel) {
         // names of columns
         Vector<String> columnNames = new Vector<>();
+        columnNames.add("");
         columnNames.add("id");
         columnNames.add("");
         columnNames.add("type");
@@ -230,6 +257,11 @@ public class SevenPaceToolWindow {
         for (WorkItemSearch workItemContainer : searchResultModel.getWorkItems()) {
             addUrlToMap(workItemSearchUris, workItemContainer.getWorkItem());
             Vector<Object> vector = new Vector<>();
+            if (favourites != null && favourites.ids != null && favourites.ids.contains(workItemContainer.getWorkItem().getId().toString())) {
+                vector.add(icons.get("Favourite_In"));
+            } else {
+                vector.add(icons.get("Favourite_Out"));
+            }
             vector.add(workItemContainer.getWorkItem().getId());
             vector.add(icons.get(workItemContainer.getWorkItem().getType()));
             vector.add(workItemContainer.getWorkItem().getType());
@@ -239,14 +271,59 @@ public class SevenPaceToolWindow {
         }
 
         tableWorkItemsSearch.setModel(new RecentTableModel(data, columnNames));
-        tableWorkItemsSearch.getColumnModel().getColumn(0).setMinWidth(40);
-        tableWorkItemsSearch.getColumnModel().getColumn(0).setMaxWidth(40);
+        tableWorkItemsSearch.getColumnModel().getColumn(0).setMinWidth(20);
+        tableWorkItemsSearch.getColumnModel().getColumn(0).setMaxWidth(20);
 
-        tableWorkItemsSearch.getColumnModel().getColumn(1).setMinWidth(20);
-        tableWorkItemsSearch.getColumnModel().getColumn(1).setMaxWidth(20);
+        tableWorkItemsSearch.getColumnModel().getColumn(1).setMinWidth(40);
+        tableWorkItemsSearch.getColumnModel().getColumn(1).setMaxWidth(40);
 
-        tableWorkItemsSearch.getColumnModel().getColumn(2).setMinWidth(70);
-        tableWorkItemsSearch.getColumnModel().getColumn(2).setMaxWidth(70);
+        tableWorkItemsSearch.getColumnModel().getColumn(2).setMinWidth(20);
+        tableWorkItemsSearch.getColumnModel().getColumn(2).setMaxWidth(20);
+
+        tableWorkItemsSearch.getColumnModel().getColumn(3).setMinWidth(70);
+        tableWorkItemsSearch.getColumnModel().getColumn(3).setMaxWidth(70);
+    }
+
+    private void loadFavouriteItems() {
+        if (favourites == null || favourites.ids == null) {
+            log.info("Favourites have not been initialized!");
+            return;
+        }
+
+        // names of columns
+        Vector<String> columnNames = new Vector<>();
+        columnNames.add("");
+        columnNames.add("id");
+        columnNames.add("");
+        columnNames.add("type");
+        columnNames.add("name");
+
+        // data of the table
+        workItemFavoriteUris.clear();
+        Vector<Vector<Object>> data = new Vector<>();
+        for (String id : favourites.ids) {
+            addUrlToMap(workItemFavoriteUris, id, favourites.links.get(id));
+            Vector<Object> vector = new Vector<>();
+            vector.add(icons.get("Favourite_In"));
+            vector.add(id);
+            vector.add(icons.get(favourites.types.get(id)));
+            vector.add(favourites.types.get(id));
+            vector.add(favourites.titles.get(id));
+            data.add(vector);
+        }
+
+        tableWorkItemsFavourites.setModel(new RecentTableModel(data, columnNames));
+        tableWorkItemsFavourites.getColumnModel().getColumn(0).setMinWidth(20);
+        tableWorkItemsFavourites.getColumnModel().getColumn(0).setMaxWidth(20);
+
+        tableWorkItemsFavourites.getColumnModel().getColumn(1).setMinWidth(40);
+        tableWorkItemsFavourites.getColumnModel().getColumn(1).setMaxWidth(40);
+
+        tableWorkItemsFavourites.getColumnModel().getColumn(2).setMinWidth(20);
+        tableWorkItemsFavourites.getColumnModel().getColumn(2).setMaxWidth(20);
+
+        tableWorkItemsFavourites.getColumnModel().getColumn(3).setMinWidth(70);
+        tableWorkItemsFavourites.getColumnModel().getColumn(3).setMaxWidth(70);
     }
 
     private void loadRecentItems() {
@@ -259,6 +336,7 @@ public class SevenPaceToolWindow {
 
         // names of columns
         Vector<String> columnNames = new Vector<>();
+        columnNames.add("");
         columnNames.add("id");
         columnNames.add("");
         columnNames.add("type");
@@ -274,6 +352,11 @@ public class SevenPaceToolWindow {
         for (WorkLog log : logs.getWorkLogs()) {
             addUrlToMap(workItemRecentUris, log.getWorkItem());
             Vector<Object> vector = new Vector<>();
+            if (favourites != null && favourites.ids != null && favourites.ids.contains(log.getWorkItem().getId())) {
+                vector.add(icons.get("Favourite_In"));
+            } else {
+                vector.add(icons.get("Favourite_Out"));
+            }
             vector.add(log.getWorkItem().getId());
             vector.add(icons.get(log.getWorkItem().getType()));
             vector.add(log.getWorkItem().getType());
@@ -287,31 +370,38 @@ public class SevenPaceToolWindow {
 
 
         tableWorkItemsRecent.setModel(new RecentTableModel(data, columnNames));
-        tableWorkItemsRecent.getColumnModel().getColumn(0).setMinWidth(40);
-        tableWorkItemsRecent.getColumnModel().getColumn(0).setMaxWidth(40);
+        tableWorkItemsRecent.getColumnModel().getColumn(0).setMinWidth(20);
+        tableWorkItemsRecent.getColumnModel().getColumn(0).setMaxWidth(20);
 
-        tableWorkItemsRecent.getColumnModel().getColumn(1).setMinWidth(20);
-        tableWorkItemsRecent.getColumnModel().getColumn(1).setMaxWidth(20);
+        tableWorkItemsRecent.getColumnModel().getColumn(1).setMinWidth(40);
+        tableWorkItemsRecent.getColumnModel().getColumn(1).setMaxWidth(40);
 
-        tableWorkItemsRecent.getColumnModel().getColumn(2).setMinWidth(70);
-        tableWorkItemsRecent.getColumnModel().getColumn(2).setMaxWidth(70);
+        tableWorkItemsRecent.getColumnModel().getColumn(2).setMinWidth(20);
+        tableWorkItemsRecent.getColumnModel().getColumn(2).setMaxWidth(20);
 
-        tableWorkItemsRecent.getColumnModel().getColumn(4).setMinWidth(80);
-        tableWorkItemsRecent.getColumnModel().getColumn(4).setMaxWidth(80);
+        tableWorkItemsRecent.getColumnModel().getColumn(3).setMinWidth(70);
+        tableWorkItemsRecent.getColumnModel().getColumn(3).setMaxWidth(70);
 
-        tableWorkItemsRecent.getColumnModel().getColumn(5).setMinWidth(70);
-        tableWorkItemsRecent.getColumnModel().getColumn(5).setMaxWidth(70);
+        tableWorkItemsRecent.getColumnModel().getColumn(5).setMinWidth(80);
+        tableWorkItemsRecent.getColumnModel().getColumn(5).setMaxWidth(80);
 
-        tableWorkItemsRecent.getColumnModel().getColumn(6).setMinWidth(130);
-        tableWorkItemsRecent.getColumnModel().getColumn(6).setMaxWidth(130);
+        tableWorkItemsRecent.getColumnModel().getColumn(6).setMinWidth(70);
+        tableWorkItemsRecent.getColumnModel().getColumn(6).setMaxWidth(70);
 
         tableWorkItemsRecent.getColumnModel().getColumn(7).setMinWidth(130);
         tableWorkItemsRecent.getColumnModel().getColumn(7).setMaxWidth(130);
+
+        tableWorkItemsRecent.getColumnModel().getColumn(8).setMinWidth(130);
+        tableWorkItemsRecent.getColumnModel().getColumn(8).setMaxWidth(130);
     }
 
     private void addUrlToMap(Map<String, URI> map, WorkItem workItem) {
+        addUrlToMap(map, workItem.getId().toString(), workItem.getWorkItemLink());
+    }
+
+    private void addUrlToMap(Map<String, URI> map, String id, String workItemLink) {
         try {
-            map.put(workItem.getId().toString(), new URI(workItem.getWorkItemLink()));
+            map.put(id, new URI(workItemLink));
         } catch (Exception ignored) {
         }
     }
