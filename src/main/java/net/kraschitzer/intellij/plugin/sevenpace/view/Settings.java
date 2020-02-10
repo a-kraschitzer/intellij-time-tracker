@@ -1,14 +1,18 @@
 package net.kraschitzer.intellij.plugin.sevenpace.view;
 
-import com.intellij.ide.util.PropertiesComponent;
+import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.options.ConfigurationException;
+import com.intellij.openapi.ui.ComboBox;
 import lombok.extern.slf4j.Slf4j;
 import net.kraschitzer.intellij.plugin.sevenpace.communication.ICommunicator;
+import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.ComHostNotFoundException;
+import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.ComHostUnknownException;
 import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.CommunicatorException;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.*;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.enums.PinStatusEnum;
-import net.kraschitzer.intellij.plugin.sevenpace.utils.SettingKeys;
+import net.kraschitzer.intellij.plugin.sevenpace.model.enums.BranchCheckoutBehaviour;
+import net.kraschitzer.intellij.plugin.sevenpace.persistence.SettingsState;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,6 +29,8 @@ public class Settings implements Configurable {
     private JTextField textFieldUrl;
     private JButton buttonGeneratePin;
 
+    private JComboBox<BranchCheckoutBehaviour> comboBoxBranchCheckoutBehaviour;
+
     private JPanel contentPanel;
     private JPanel infoPanel;
     private JTextField textFieldName;
@@ -34,7 +40,7 @@ public class Settings implements Configurable {
 
 
     private final ICommunicator communicator;
-    private PropertiesComponent props;
+    private SettingsState settings = ServiceManager.getService(SettingsState.class);
 
     private String url;
 
@@ -56,10 +62,9 @@ public class Settings implements Configurable {
                 resetError();
             }
         });
-        props = PropertiesComponent.getInstance();
         communicator = ICommunicator.getInstance();
 
-        url = props.getValue(SettingKeys.URL);
+        url = settings.url;
         textFieldUrl.setText(url != null ? url : "");
         try {
             communicator.initialize();
@@ -73,12 +78,13 @@ public class Settings implements Configurable {
     @Nls(capitalization = Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
-        return "7PaceTimeTracker";
+        return "Timetracker (7Pace)";
     }
 
     @Nullable
     @Override
     public JComponent createComponent() {
+        comboBoxBranchCheckoutBehaviour = new ComboBox<>(BranchCheckoutBehaviour.values());
         return contentPanel;
     }
 
@@ -91,8 +97,9 @@ public class Settings implements Configurable {
     public void apply() throws ConfigurationException {
         saveInput();
         clearCachedInfo();
+        communicator.resetInitialization();
+        populateUserInformation();
         try {
-            communicator.resetInitialization();
             communicator.initialize();
         } catch (CommunicatorException e) {
             setError("Failed to initialize communicator.");
@@ -107,14 +114,17 @@ public class Settings implements Configurable {
         } catch (UnknownHostException e) {
             throw new ConfigurationException("The given url '" + url + "' is invalid!");
         }
-        props.setValue(SettingKeys.URL, url);
+        settings.url = url;
+        settings.branchCheckoutBehaviour = comboBoxBranchCheckoutBehaviour
+                .getItemAt(comboBoxBranchCheckoutBehaviour.getSelectedIndex());
     }
 
     private void createUIComponents() {
-        // TODO: place custom component creation code here
+        comboBoxBranchCheckoutBehaviour = new ComboBox<>(BranchCheckoutBehaviour.values());
     }
 
     private void generatePin() {
+        resetError();
         try {
             saveInput();
             clearCachedInfo();
@@ -128,8 +138,20 @@ public class Settings implements Configurable {
             return;
         }
 
-        final PinContext pin = communicator.pinCreate();
-        final SampleDialogWrapper dialog = new SampleDialogWrapper(pin.getPin());
+        final PinContext pin;
+        try {
+            pin = communicator.pinCreate();
+        } catch (ComHostNotFoundException e) {
+            setError("The given host does not support 7pace PIN creation!");
+            return;
+        } catch (ComHostUnknownException e) {
+            setError("The given url '" + url + "' is invalid!");
+            return;
+        } catch (CommunicatorException e) {
+            setError("Failed to create PIN.");
+            return;
+        }
+        final PINDialog dialog = new PINDialog(pin.getPin(), url.split(".timehub.7pace.com")[0]);
         Thread t = new Thread(() -> {
             PinStatus status = communicator.pinStatus(pin.getSecret());
             while (PinStatusEnum.Validating.equals(status.getStatus()) && !Thread.currentThread().isInterrupted()) {
@@ -150,11 +172,12 @@ public class Settings implements Configurable {
                 try {
                     token = communicator.token(pin.getSecret());
                 } catch (CommunicatorException e) {
-                    e.printStackTrace();
+                    setError("Failed to generate token, please try again.");
+                    return;
                 }
-                props.setValue(SettingKeys.ACCESS_TOKEN, token.getAccess_token());
-                props.setValue(SettingKeys.REFRESH_TOKEN, token.getRefresh_token());
-                props.setValue(SettingKeys.EXPIRES, String.valueOf(token.getExpires().toInstant(ZoneOffset.UTC).toEpochMilli()));
+                settings.accessToken = token.getAccess_token();
+                settings.refreshToken = token.getRefresh_token();
+                settings.expires = String.valueOf(token.getExpires().toInstant(ZoneOffset.UTC).toEpochMilli());
             }
             dialog.setValidated();
         });
@@ -183,9 +206,7 @@ public class Settings implements Configurable {
     }
 
     private void clearCachedInfo() {
-        props.setValue(SettingKeys.ACCESS_TOKEN, "");
-        props.setValue(SettingKeys.REFRESH_TOKEN, "");
-        props.setValue(SettingKeys.EXPIRES, "");
+        settings.clear();
     }
 
     private void setError(String msg) {

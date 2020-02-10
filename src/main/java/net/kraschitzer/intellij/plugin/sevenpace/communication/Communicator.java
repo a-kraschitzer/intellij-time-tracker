@@ -1,8 +1,8 @@
 package net.kraschitzer.intellij.plugin.sevenpace.communication;
 
-import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.notification.NotificationDisplayType;
 import com.intellij.notification.NotificationGroup;
+import com.intellij.openapi.components.ServiceManager;
 import com.intellij.util.net.HTTPMethod;
 import lombok.extern.slf4j.Slf4j;
 import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.*;
@@ -12,8 +12,9 @@ import net.kraschitzer.intellij.plugin.sevenpace.model.api.request.UpdateTrackRe
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.Error;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.*;
 import net.kraschitzer.intellij.plugin.sevenpace.model.enums.Reason;
-import net.kraschitzer.intellij.plugin.sevenpace.utils.SettingKeys;
+import net.kraschitzer.intellij.plugin.sevenpace.persistence.SettingsState;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpStatus;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -34,7 +35,7 @@ public class Communicator implements ICommunicator {
 
     private static final String PROTOCOL = "https://";
 
-    private PropertiesComponent props;
+    private SettingsState settings = ServiceManager.getService(SettingsState.class);
     private Client client;
 
     private TrackingStateModel currentState;
@@ -54,13 +55,12 @@ public class Communicator implements ICommunicator {
         if (!initialized) {
             authenticated = false;
 
-            this.props = PropertiesComponent.getInstance();
-            String apiAddress = props.getValue(SettingKeys.URL);
+            String apiAddress = settings.url;
 
             log.debug("Initializing with apiAddress: {}", apiAddress);
 
             if (StringUtils.isBlank(apiAddress)) {
-                throw new CommunicatorNotInitializedException("Missing apiAddress");
+                throw new ComNotInitializedException("Missing apiAddress");
             }
 
             client = ClientBuilder.newClient();
@@ -71,55 +71,36 @@ public class Communicator implements ICommunicator {
 
     public void authenticate() throws CommunicatorException {
         if (!authenticated) {
-            String accessToken = props.getValue(SettingKeys.ACCESS_TOKEN);
+            String accessToken = settings.accessToken;
             if (StringUtils.isBlank(accessToken)) {
-                throw new CommunicatorNotAuthenticatedException();
+                throw new ComNotAuthenticatedException();
             }
             try {
                 refreshTokenIfNecessary();
                 currentState = getCurrentStateInitialized(true);
                 authenticated = true;
-            } catch (CommunicatorNotInitializedException e) {
+            } catch (ComNotInitializedException e) {
                 authenticated = false;
             }
         }
     }
 
     private void refreshTokenIfNecessary() throws CommunicatorException {
-        String refreshToken = Optional.ofNullable(props.getValue(SettingKeys.REFRESH_TOKEN)).orElseThrow(CommunicatorNotInitializedException::new);
-        String expiresString = Optional.ofNullable(props.getValue(SettingKeys.EXPIRES)).orElseThrow(CommunicatorNotInitializedException::new);
+        String refreshToken = Optional.ofNullable(settings.refreshToken).orElseThrow(ComNotInitializedException::new);
+        String expiresString = Optional.ofNullable(settings.expires).orElseThrow(ComNotInitializedException::new);
         LocalDateTime expires = LocalDateTime.ofInstant(Instant.ofEpochMilli(Long.parseLong(expiresString)), ZoneId.of("UTC"));
 
         if (LocalDateTime.now().plus(1, ChronoUnit.DAYS).isAfter(expires)) {
             Token token = refreshToken(refreshToken);
-            props.setValue(SettingKeys.ACCESS_TOKEN, token.getAccess_token());
-            props.setValue(SettingKeys.REFRESH_TOKEN, token.getRefresh_token());
-            props.setValue(SettingKeys.EXPIRES, String.valueOf(token.getExpires().toInstant(ZoneOffset.UTC).toEpochMilli()));
+            settings.accessToken = token.getAccess_token();
+            settings.refreshToken = token.getRefresh_token();
+            settings.expires = String.valueOf(token.getExpires().toInstant(ZoneOffset.UTC).toEpochMilli());
         }
     }
 
     @Override
-    public PinContext pinCreate() {
-        Invocation.Builder invBuilder = client.target(protocolAddress)
-                .path("/api/pin/create")
-                .queryParam("api-version", "2.1").request();
-        Invocation in = invBuilder
-                .header(HttpHeaders.CONTENT_LENGTH, 0)
-                .accept(MediaType.APPLICATION_JSON)
-                .buildPost(Entity.text(""));
-        Response response = in.invoke();
-        if (response.getStatus() - 200 < 100) {
-            return response.readEntity(PinContext.class);
-        } else {
-            try {
-                System.out.println(response.readEntity(net.kraschitzer.intellij.plugin.sevenpace.model.api.response.Response.class));
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                System.exit(1);
-            }
-        }
-        System.exit(1);
-        return null;
+    public PinContext pinCreate() throws CommunicatorException {
+        return apiPostJson("/pin/create", "", PinContext.class);
     }
 
     @Override
@@ -161,7 +142,7 @@ public class Communicator implements ICommunicator {
         MultivaluedMap<String, String> form = new MultivaluedHashMap<>();
         form.put("client_id", Collections.singletonList("OpenApi"));
         form.put("grant_type", Collections.singletonList("refresh_token"));
-        form.put("refresh_token", Collections.singletonList(props.getValue(SettingKeys.REFRESH_TOKEN)));
+        form.put("refresh_token", Collections.singletonList(settings.refreshToken));
 
         return apiPostToken("/token", form, Token.class);
     }
@@ -240,23 +221,23 @@ public class Communicator implements ICommunicator {
         return authenticated;
     }
 
-    private <T> T apiGet(String url, Class<T> responseType) throws CommunicationErrorException, CommunicationErrorParseException, CommunicationException, CommunicationHostUnknownException {
+    private <T> T apiGet(String url, Class<T> responseType) throws ComErrorException, ComErrorParseException, ComException, ComHostNotFoundException {
         return request(HTTPMethod.GET, "/api" + url, null, responseType, true);
     }
 
-    private <T> T apiPostJson(String url, Object body, Class<T> responseType) throws CommunicationErrorException, CommunicationErrorParseException, CommunicationException, CommunicationHostUnknownException {
+    private <T> T apiPostJson(String url, Object body, Class<T> responseType) throws ComErrorException, ComErrorParseException, ComException, ComHostNotFoundException {
         return request(HTTPMethod.POST, "/api" + url, Entity.json(body), responseType, true);
     }
 
-    private <T> T apiPostToken(String url, MultivaluedMap<String, String> form, Class<T> responseType) throws CommunicationErrorException, CommunicationErrorParseException, CommunicationException, CommunicationHostUnknownException {
+    private <T> T apiPostToken(String url, MultivaluedMap<String, String> form, Class<T> responseType) throws ComErrorParseException, ComException, ComHostNotFoundException {
         return request(HTTPMethod.POST, url, Entity.form(form), responseType, false);
     }
 
-    private <T> T request(HTTPMethod method, String url, Entity entity, Class<T> responseType, boolean authenticated) throws CommunicationErrorException, CommunicationErrorParseException, CommunicationException, CommunicationHostUnknownException {
+    private <T> T request(HTTPMethod method, String url, Entity entity, Class<T> responseType, boolean authenticated) throws ComErrorParseException, ComException, ComHostNotFoundException {
         Invocation.Builder ib = client.target(protocolAddress + url + "?api-version=2.1")
                 .request(MediaType.APPLICATION_JSON_TYPE);
         if (authenticated) {
-            ib.header(HttpHeaders.AUTHORIZATION, "Bearer " + props.getValue(SettingKeys.ACCESS_TOKEN));
+            ib.header(HttpHeaders.AUTHORIZATION, "Bearer " + settings.accessToken);
         }
         Invocation in;
         switch (method) {
@@ -267,16 +248,18 @@ public class Communicator implements ICommunicator {
                 in = ib.buildPost(entity);
                 break;
             default:
-                throw new CommunicationException("Given Method " + method + " not supported");
+                throw new ComException("Given Method " + method + " not supported");
         }
         Response response = in.invoke();
         if (response != null && response.getStatus() - 200 < 100) {
             return response.readEntity(responseType);
+        } else if (response != null && response.getStatus() == HttpStatus.SC_NOT_FOUND) {
+            throw new ComHostNotFoundException();
         } else {
             try {
-                throw new CommunicationErrorException(response.readEntity(Error.class));
+                throw new ComErrorException(response.readEntity(Error.class));
             } catch (Exception e) {
-                throw new CommunicationErrorParseException("Failed to parse error communication error", e);
+                throw new ComErrorParseException("Failed to parse error communication error", e);
             }
         }
     }

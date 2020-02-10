@@ -1,17 +1,23 @@
-<idea-plugin>
+<idea-plugin url="https://github.com/a-kraschitzer/7pace-intellij-tracker">
     <id>net.kraschitzer.intellij.plugin.sevenpace.7pace-intellij-plugin</id>
-    <name>7pace Time Tracker</name>
+    <name>Time Tracker (7Pace)</name>
     <vendor url="https://github.com/a-kraschitzer">Andreas Kraschitzer</vendor>
 
-    <description><![CDATA[
-    This plugin utilizes the 7pace time tracker open REST API to facilitate the tracking of work items from within the IntelliJ IDE.
-    ]]></description>
+    <description>
+        <![CDATA[[
+        Enables tracking of AzureDevops work items through the open REST API of 7Pace from within IntelliJ IDE.<br>
+        Alpha release of the plugin.<br>This plugin might be unstable and crash your IDE.
+        ]]>
+    </description>
+
+    <version>alpha-0.2</version>
+    <idea-version since-build="193.6015.39"></idea-version>
 
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationConfigurable instance="net.kraschitzer.intellij.plugin.sevenpace.view.Settings"/>
-        <toolWindow id="7PaceToolWindow"
+        <toolWindow id="Timetracker"
                     anchor="bottom"
                     secondary="true"
                     icon="/net/kraschitzer/intellij/plugin/sevenpace/icons/sevenicon.png"
@@ -19,6 +25,14 @@
         <applicationService serviceInterface="net.kraschitzer.intellij.plugin.sevenpace.communication.ICommunicator"
                             serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.communication.Communicator"/>
         <applicationService serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.NotificationManager"/>
-        <applicationService serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.persistence.Favourites"/>
+        <applicationService
+                serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.persistence.FavouritesState"/>
+        <applicationService
+                serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.persistence.SettingsState"/>
     </extensions>
+    <projectListeners>
+        <listener class="net.kraschitzer.intellij.plugin.sevenpace.view.SevenPaceToolWindow"
+                  topic="com.intellij.openapi.vcs.BranchChangeListener">
+        </listener>
+    </projectListeners>
 </idea-plugin>

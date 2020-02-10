@@ -1,35 +1,40 @@
 package net.kraschitzer.intellij.plugin.sevenpace.view;
 
 import com.intellij.openapi.components.ServiceManager;
+import com.intellij.openapi.vcs.BranchChangeListener;
 import com.intellij.openapi.wm.ToolWindow;
+import com.intellij.ui.JBColor;
 import lombok.extern.slf4j.Slf4j;
 import net.kraschitzer.intellij.plugin.sevenpace.NotificationManager;
 import net.kraschitzer.intellij.plugin.sevenpace.communication.ICommunicator;
+import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.ComNotInitializedException;
 import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.CommunicatorException;
-import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.CommunicatorNotInitializedException;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.request.StartTrackingRequest;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.Settings;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.*;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.enums.ResponseState;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.enums.TimeTrackingState;
+import net.kraschitzer.intellij.plugin.sevenpace.model.enums.Icon;
 import net.kraschitzer.intellij.plugin.sevenpace.model.enums.Reason;
-import net.kraschitzer.intellij.plugin.sevenpace.persistence.Favourites;
+import net.kraschitzer.intellij.plugin.sevenpace.persistence.FavouritesState;
+import net.kraschitzer.intellij.plugin.sevenpace.persistence.SettingsState;
 import net.kraschitzer.intellij.plugin.sevenpace.utils.IntegerDocumentFilter;
+import net.kraschitzer.intellij.plugin.sevenpace.utils.MouseClickListener;
 import org.apache.commons.lang.StringUtils;
+import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.text.PlainDocument;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
 
 @Slf4j
-public class SevenPaceToolWindow {
+public class SevenPaceToolWindow implements BranchChangeListener {
 
     private JLabel labelCurrentTrackItemId;
     private JLabel labelCurrentTrackItemDescription;
@@ -42,7 +47,7 @@ public class SevenPaceToolWindow {
     private JComboBox<ActivityTypeSetting> comboBoxActivityType;
 
     private JButton buttonStartTracking;
-    private JButton buttonStopTracking;
+    private JButton buttonResumeStopTracking;
     private JButton buttonSearchWorkItems;
 
     private JTable tableWorkItemsRecent;
@@ -55,31 +60,27 @@ public class SevenPaceToolWindow {
     private JSeparator separatorVertical;
 
     private ICommunicator communicator;
-    private Map<String, ImageIcon> icons;
     private Map<String, String> activityTypes;
-    private Map<String, URI> workItemRecentUris;
-    private Map<String, URI> workItemFavoriteUris;
-    private Map<String, URI> workItemSearchUris;
 
     private TrackingStateModel currentState;
 
-    private Favourites favourites = ServiceManager.getService(Favourites.class);
+    private FavouritesState favourites = ServiceManager.getService(FavouritesState.class);
+    private SettingsState settings = ServiceManager.getService(SettingsState.class);
+    private String workItemUrlBase = null;
 
+    public SevenPaceToolWindow() {
+        this(null);
+    }
 
     public SevenPaceToolWindow(ToolWindow toolWindow) {
         communicator = ICommunicator.getInstance();
-
-        workItemRecentUris = new HashMap<>();
-        workItemFavoriteUris = new HashMap<>();
-        workItemSearchUris = new HashMap<>();
-        loadIcons();
         initializeComponents();
 
         try {
             currentState = communicator.getCurrentState(true);
             loadActivityTypes(currentState.getSettings());
             updateCurrentTrackedItem();
-        } catch (CommunicatorNotInitializedException e) {
+        } catch (ComNotInitializedException e) {
             NotificationManager.getInstance().sendSettingNotification("Communicator not initialized.");
             log.info("Communicator hasn't been initialized.");
         } catch (CommunicatorException e) {
@@ -98,43 +99,11 @@ public class SevenPaceToolWindow {
     }
 
     private void initializeComponents() {
-        buttonStartTracking.addActionListener(this::startTracking);
-        buttonStopTracking.addActionListener(this::stopTrackingCurrent);
+        buttonStartTracking.addActionListener(this::startTrackingButtonAction);
+        buttonResumeStopTracking.addActionListener(this::resumeStopTrackingCurrent);
         buttonSearchWorkItems.addActionListener(this::searchWorkItems);
         textFieldSearchWorkItems.addActionListener(this::searchWorkItems);
-        labelCurrentTrackItemDescription.addMouseListener(new MouseListener() {
-
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (currentState != null && currentState.getTrack() != null
-                        && currentState.getTrack().getWorkItem() != null
-                        && currentState.getTrack().getWorkItem().getWorkItemLink() != null) {
-                    try {
-                        if (Desktop.isDesktopSupported()) {
-                            Desktop.getDesktop().browse(new URI(currentState.getTrack().getWorkItem().getWorkItemLink()));
-                        }
-                    } catch (Exception ex) {
-                        log.debug("Failed to open external work item link for id '" + currentState.getTrack().getWorkItem().getId() + "' with error: " + ex.getMessage());
-                    }
-                }
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-            }
-
-            @Override
-            public void mouseEntered(MouseEvent e) {
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-            }
-        });
+        labelCurrentTrackItemDescription.addMouseListener((MouseClickListener) e -> openURL(null));
         ((PlainDocument) textFieldSelectedWorkItem.getDocument()).setDocumentFilter(new IntegerDocumentFilter());
 
         tabbedPaneTables.addChangeListener(e -> {
@@ -154,61 +123,35 @@ public class SevenPaceToolWindow {
     }
 
     private void attachTableSelectionListener(JTable table) {
-        table.addMouseListener(new MouseListener() {
+        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
-            public void mouseClicked(MouseEvent e) {
-                String selectedWorkItemId = table.getValueAt(table.getSelectedRow(), 1).toString();
-                textFieldSelectedWorkItem.setText(selectedWorkItemId);
-
-                URI selectedUri = null;
-                if (table == tableWorkItemsRecent) {
-                    selectedUri = workItemRecentUris.get(selectedWorkItemId);
-                } else if (table == tableWorkItemsFavourites) {
-                    selectedUri = workItemFavoriteUris.get(selectedWorkItemId);
-                } else if (table == tableWorkItemsSearch) {
-                    selectedUri = workItemSearchUris.get(selectedWorkItemId);
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (column == 4) {
+                    c.setForeground(JBColor.BLUE);
+                } else {
+                    c.setForeground(JBColor.BLACK);
                 }
+                return c;
+            }
+        });
+        table.addMouseListener((MouseClickListener) e -> {
+            String selectedWorkItemId = table.getValueAt(table.getSelectedRow(), 1).toString();
+            textFieldSelectedWorkItem.setText(selectedWorkItemId);
 
-                if (table.getSelectedColumn() == 0) {
-                    if (favourites.ids.contains(selectedWorkItemId)) {
-                        favourites.removeFavourite(selectedWorkItemId);
-                        table.setValueAt(icons.get("Favourite_Out"), table.getSelectedRow(), table.getSelectedColumn());
-                    } else {
-                        favourites.addFavourite(selectedWorkItemId,
-                                table.getValueAt(table.getSelectedRow(), 3).toString(),
-                                table.getValueAt(table.getSelectedRow(), 4).toString(),
-                                selectedUri != null ? selectedUri.toString() : "");
-                        table.setValueAt(icons.get("Favourite_In"), table.getSelectedRow(), table.getSelectedColumn());
-                    }
-                }
-                if (table.getSelectedColumn() == 4) {
-                    if (selectedUri == null) {
-                        NotificationManager.getInstance().sendWarningNotification("Failed to open URL.", "No URL was found for the selected Work Item.");
-                    }
-                    try {
-                        if (Desktop.isDesktopSupported()) {
-                            Desktop.getDesktop().browse(selectedUri);
-                        }
-                    } catch (Exception ex) {
-                        log.debug("Failed to open external work item link for id '" + selectedWorkItemId + "' with error: " + ex.getMessage());
-                    }
+            if (table.getSelectedColumn() == 0) {
+                if (favourites.ids.contains(selectedWorkItemId)) {
+                    favourites.removeFavourite(selectedWorkItemId);
+                    table.setValueAt(Icon.getByName("Favourite_Out").getIcon(), table.getSelectedRow(), table.getSelectedColumn());
+                } else {
+                    favourites.addFavourite(selectedWorkItemId,
+                            table.getValueAt(table.getSelectedRow(), 3).toString(),
+                            table.getValueAt(table.getSelectedRow(), 4).toString());
+                    table.setValueAt(Icon.getByName("Favourite_In").getIcon(), table.getSelectedRow(), table.getSelectedColumn());
                 }
             }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-            }
-
-            @Override
-            public void mouseEntered(MouseEvent e) {
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
+            if (table.getSelectedColumn() == 4) {
+                openURL(table);
             }
         });
     }
@@ -222,21 +165,6 @@ public class SevenPaceToolWindow {
             }
             activityTypes.put(setting.getId(), setting.getName());
         }
-    }
-
-    private void loadIcons() {
-        String path = "/net/kraschitzer/intellij/plugin/sevenpace/icons/";
-        icons = new HashMap<>();
-        icons.put("Bug", new ImageIcon(getClass().getResource(path + "bug.png")));
-        icons.put("Epic", new ImageIcon(getClass().getResource(path + "epic.png")));
-        icons.put("Task", new ImageIcon(getClass().getResource(path + "task.png")));
-        icons.put("User Story", new ImageIcon(getClass().getResource(path + "user_story.png")));
-        icons.put("Issue", new ImageIcon(getClass().getResource(path + "issue.png")));
-        icons.put("Feature", new ImageIcon(getClass().getResource(path + "feature.png")));
-        icons.put("Task_Start", new ImageIcon(getClass().getResource(path + "start.png")));
-        icons.put("Task_Stop", new ImageIcon(getClass().getResource(path + "stop.png")));
-        icons.put("Favourite_In", new ImageIcon(getClass().getResource(path + "star2.png")));
-        icons.put("Favourite_Out", new ImageIcon(getClass().getResource(path + "star_empty2.png")));
     }
     //endregion
 
@@ -252,18 +180,16 @@ public class SevenPaceToolWindow {
         columnNames.add("parent");
 
         // data of the table
-        workItemSearchUris.clear();
         Vector<Vector<Object>> data = new Vector<>();
         for (WorkItemSearch workItemContainer : searchResultModel.getWorkItems()) {
-            addUrlToMap(workItemSearchUris, workItemContainer.getWorkItem());
             Vector<Object> vector = new Vector<>();
             if (favourites != null && favourites.ids != null && favourites.ids.contains(workItemContainer.getWorkItem().getId().toString())) {
-                vector.add(icons.get("Favourite_In"));
+                vector.add(Icon.STAR.getIcon());
             } else {
-                vector.add(icons.get("Favourite_Out"));
+                vector.add(Icon.STAR_EMPTY.getIcon());
             }
             vector.add(workItemContainer.getWorkItem().getId());
-            vector.add(icons.get(workItemContainer.getWorkItem().getType()));
+            vector.add(Icon.getByName(workItemContainer.getWorkItem().getType()).getIcon());
             vector.add(workItemContainer.getWorkItem().getType());
             vector.add(workItemContainer.getWorkItem().getTitle());
             vector.add(workItemContainer.getWorkItem().getParent());
@@ -299,14 +225,12 @@ public class SevenPaceToolWindow {
         columnNames.add("name");
 
         // data of the table
-        workItemFavoriteUris.clear();
         Vector<Vector<Object>> data = new Vector<>();
         for (String id : favourites.ids) {
-            addUrlToMap(workItemFavoriteUris, id, favourites.links.get(id));
             Vector<Object> vector = new Vector<>();
-            vector.add(icons.get("Favourite_In"));
+            vector.add(Icon.STAR.getIcon());
             vector.add(id);
-            vector.add(icons.get(favourites.types.get(id)));
+            vector.add(Icon.getByName(favourites.types.get(id)).getIcon());
             vector.add(favourites.types.get(id));
             vector.add(favourites.titles.get(id));
             data.add(vector);
@@ -346,19 +270,17 @@ public class SevenPaceToolWindow {
         columnNames.add("startTime");
         columnNames.add("endTime");
 
-        workItemRecentUris.clear();
         // data of the table
         Vector<Vector<Object>> data = new Vector<>();
         for (WorkLog log : logs.getWorkLogs()) {
-            addUrlToMap(workItemRecentUris, log.getWorkItem());
             Vector<Object> vector = new Vector<>();
             if (favourites != null && favourites.ids != null && favourites.ids.contains(log.getWorkItem().getId())) {
-                vector.add(icons.get("Favourite_In"));
+                vector.add(Icon.STAR.getIcon());
             } else {
-                vector.add(icons.get("Favourite_Out"));
+                vector.add(Icon.STAR_EMPTY.getIcon());
             }
             vector.add(log.getWorkItem().getId());
-            vector.add(icons.get(log.getWorkItem().getType()));
+            vector.add(Icon.getByName(log.getWorkItem().getType()).getIcon());
             vector.add(log.getWorkItem().getType());
             vector.add(log.getWorkItem().getTitle());
             vector.add(activityTypes.get(log.getActivityTypeId()));
@@ -395,30 +317,32 @@ public class SevenPaceToolWindow {
         tableWorkItemsRecent.getColumnModel().getColumn(8).setMaxWidth(130);
     }
 
-    private void addUrlToMap(Map<String, URI> map, WorkItem workItem) {
-        addUrlToMap(map, workItem.getId().toString(), workItem.getWorkItemLink());
-    }
-
-    private void addUrlToMap(Map<String, URI> map, String id, String workItemLink) {
-        try {
-            map.put(id, new URI(workItemLink));
-        } catch (Exception ignored) {
-        }
-    }
-
     private void updateCurrentTrackedItem() {
+        String completeUrl = currentState.getTrack().getWorkItem().getWorkItemLink();
+        workItemUrlBase = completeUrl.substring(0, completeUrl.lastIndexOf('/') + 1);
         labelCurrentTrackItemId.setText(String.valueOf(currentState.getTrack().getWorkItem().getId()));
         labelCurrentTrackItemDescription.setText(currentState.getTrack().getWorkItem().getType()
                 + ": " + currentState.getTrack().getWorkItem().getTitle());
         labelCurrentTrackTime.setText(formatDuration(currentState.getTrack().getTotalMeLength()));
-        labelCurrentTrackIcon.setIcon(icons.get(currentState.getTrack().getWorkItem().getType()));
+        labelCurrentTrackIcon.setIcon(Icon.getByName(currentState.getTrack().getWorkItem().getType()).getIcon());
 
-        buttonStopTracking.setEnabled(TimeTrackingState.tracking.equals(currentState.getTrack().getTrackingState()));
+        if (TimeTrackingState.tracking.equals(currentState.getTrack().getTrackingState())) {
+            buttonResumeStopTracking.setIcon(Icon.STOP.getIcon());
+            buttonResumeStopTracking.setText("Stop Tracking");
+        } else {
+            buttonResumeStopTracking.setIcon(Icon.START.getIcon());
+            buttonResumeStopTracking.setText("Resume Tracking");
+        }
+        contentPanel.repaint();
     }
     //endregion
 
     //region Actions
-    private void startTracking(ActionEvent actionEvent) {
+    private void startTrackingButtonAction(ActionEvent actionEvent) {
+        if (currentState == null) {
+            NotificationManager.getInstance().sendSettingNotification("Communicator not initialized.");
+            return;
+        }
         String text = textFieldSelectedWorkItem.getText();
         Integer selectedWorkItemId;
         if (StringUtils.isBlank(text)) {
@@ -426,6 +350,69 @@ public class SevenPaceToolWindow {
         } else {
             selectedWorkItemId = Integer.parseInt(text);
         }
+        startTracking(selectedWorkItemId);
+    }
+
+    private void resumeStopTrackingCurrent(ActionEvent e) {
+        if (currentState == null) {
+            NotificationManager.getInstance().sendSettingNotification("Communicator not initialized.");
+            return;
+        }
+        if (TimeTrackingState.tracking.equals(currentState.getTrack().getTrackingState())) {
+            try {
+                TrackingStateModel stopState = communicator.stopTracking(Reason.STOPPED_BY_USER);
+                currentState.getTrack().setTrackingState(stopState.getTrack().getTrackingState());
+            } catch (CommunicatorException ex) {
+                ex.printStackTrace();
+                return;
+            }
+        } else {
+            try {
+                currentState = communicator.startTracking(StartTrackingRequest
+                        .builder()
+                        .activityTypeId(((ActivityTypeSetting) comboBoxActivityType.getSelectedItem()).getId())
+                        .tfsId(currentState.getTrack().getTfsId())
+                        .build());
+            } catch (CommunicatorException ex) {
+                ex.printStackTrace();
+                return;
+            }
+        }
+        updateCurrentTrackedItem();
+        if (tabbedPaneTables.getSelectedIndex() == 0) {
+            loadRecentItems();
+        }
+    }
+
+    private void searchWorkItems(ActionEvent actionEvent) {
+        try {
+            SearchResultModel searchResultModel = communicator.searchWorkItemByModel(textFieldSearchWorkItems.getText());
+            loadSearchResults(searchResultModel);
+        } catch (CommunicatorException e) {
+            return;
+        }
+    }
+
+    private void openURL(JTable table) {
+        final String itemId;
+        if (table == null && currentState != null && currentState.getTrack() != null
+                && currentState.getTrack().getTfsId() != null) {
+            itemId = currentState.getTrack().getTfsId().toString();
+        } else if (table != null) {
+            itemId = table.getValueAt(table.getSelectedRow(), 1).toString();
+        } else {
+            return;
+        }
+        try {
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().browse(new URI(workItemUrlBase + itemId));
+            }
+        } catch (Exception ex) {
+            log.debug("Failed to open external work item link for id '" + currentState.getTrack().getWorkItem().getId() + "' with error: " + ex.getMessage());
+        }
+    }
+
+    private void startTracking(Integer selectedWorkItemId) {
         try {
             currentState = communicator.startTracking(StartTrackingRequest
                     .builder()
@@ -450,31 +437,6 @@ public class SevenPaceToolWindow {
             log.info("Failed to start tracking of work item with id {}; error: {}", selectedWorkItemId, e.getMessage());
         }
     }
-
-    private void stopTrackingCurrent(ActionEvent e) {
-        if (TimeTrackingState.tracking.equals(currentState.getTrack().getTrackingState())) {
-            try {
-                TrackingStateModel stopState = communicator.stopTracking(Reason.STOPPED_BY_USER);
-                currentState.getTrack().setTrackingState(stopState.getTrack().getTrackingState());
-            } catch (CommunicatorException ex) {
-                ex.printStackTrace();
-                return;
-            }
-        }
-        updateCurrentTrackedItem();
-        if (tabbedPaneTables.getSelectedIndex() == 0) {
-            loadRecentItems();
-        }
-    }
-
-    private void searchWorkItems(ActionEvent actionEvent) {
-        try {
-            SearchResultModel searchResultModel = communicator.searchWorkItemByModel(textFieldSearchWorkItems.getText());
-            loadSearchResults(searchResultModel);
-        } catch (CommunicatorException e) {
-            return;
-        }
-    }
     //endregion
 
     //region utility
@@ -485,6 +447,36 @@ public class SevenPaceToolWindow {
         secondsTotal /= 60;
         int hours = (int) secondsTotal % 60;
         return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+    }
+
+    @Override
+    public void branchWillChange(@NotNull String branchName) {
+    }
+
+    @Override
+    public void branchHasChanged(@NotNull String branchName) {
+        final Integer workItemId;
+        try {
+            String workItemIdString = branchName.split("/")[1].split("_")[0];
+            workItemId = Integer.parseInt(workItemIdString);
+        } catch (Exception ex) {
+            log.debug("Failed to parse branchName '" + branchName + "' with exception: " + ex.getMessage());
+            return;
+        }
+        switch (settings.branchCheckoutBehaviour) {
+            case DIALOG:
+                StartOnBranchCheckoutDialog dialog = new StartOnBranchCheckoutDialog(workItemId);
+                if (dialog.showAndGet()) {
+                    SwingUtilities.invokeLater(() -> startTracking(workItemId));
+                }
+                return;
+            case AUTO_TRACK:
+                SwingUtilities.invokeLater(() -> startTracking(workItemId));
+                return;
+            case OFF:
+            default:
+                break;
+        }
     }
     //endregion
 }
