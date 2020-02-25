@@ -7,6 +7,7 @@ import com.intellij.ui.JBColor;
 import lombok.extern.slf4j.Slf4j;
 import net.kraschitzer.intellij.plugin.sevenpace.NotificationManager;
 import net.kraschitzer.intellij.plugin.sevenpace.communication.ICommunicator;
+import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.ComErrorException;
 import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.ComNotInitializedException;
 import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.CommunicatorException;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.request.StartTrackingRequest;
@@ -34,7 +35,9 @@ import java.util.Map;
 import java.util.Vector;
 
 @Slf4j
-public class SevenPaceToolWindow implements BranchChangeListener {
+public class TimeTrackerToolWindow implements BranchChangeListener {
+
+    public static final String TOOLWINDOW_ID = "net.kraschitzer.nintellij.plugin.timetracker";
 
     private JLabel labelCurrentTrackItemId;
     private JLabel labelCurrentTrackItemDescription;
@@ -49,6 +52,7 @@ public class SevenPaceToolWindow implements BranchChangeListener {
     private JButton buttonStartTracking;
     private JButton buttonResumeStopTracking;
     private JButton buttonSearchWorkItems;
+    private JButton buttonRefresh;
 
     private JTable tableWorkItemsRecent;
     private JTable tableWorkItemsMine;
@@ -68,25 +72,15 @@ public class SevenPaceToolWindow implements BranchChangeListener {
     private SettingsState settings = ServiceManager.getService(SettingsState.class);
     private String workItemUrlBase = null;
 
-    public SevenPaceToolWindow() {
+    public TimeTrackerToolWindow() {
         this(null);
     }
 
-    public SevenPaceToolWindow(ToolWindow toolWindow) {
+    public TimeTrackerToolWindow(ToolWindow toolWindow) {
         communicator = ICommunicator.getInstance();
         initializeComponents();
 
-        try {
-            currentState = communicator.getCurrentState(true);
-            loadActivityTypes(currentState.getSettings());
-            updateCurrentTrackedItem();
-        } catch (ComNotInitializedException e) {
-            NotificationManager.getInstance().sendSettingNotification("Communicator not initialized.");
-            log.info("Communicator hasn't been initialized.");
-        } catch (CommunicatorException e) {
-            e.printStackTrace();
-        }
-        loadRecentItems();
+        refresh(null);
     }
 
     public JPanel getContent() {
@@ -99,6 +93,7 @@ public class SevenPaceToolWindow implements BranchChangeListener {
     }
 
     private void initializeComponents() {
+        buttonRefresh.addActionListener(this::refresh);
         buttonStartTracking.addActionListener(this::startTrackingButtonAction);
         buttonResumeStopTracking.addActionListener(this::resumeStopTrackingCurrent);
         buttonSearchWorkItems.addActionListener(this::searchWorkItems);
@@ -122,6 +117,45 @@ public class SevenPaceToolWindow implements BranchChangeListener {
         attachTableSelectionListener(tableWorkItemsSearch);
     }
 
+    private void refresh(ActionEvent actionEvent) {
+        try {
+            currentState = communicator.getCurrentState(true);
+            loadActivityTypes(currentState.getSettings());
+            updateCurrentTrackedItem();
+        } catch (ComNotInitializedException e) {
+            NotificationManager.sendSettingNotification("Communicator not initialized.");
+            log.info("Communicator hasn't been initialized.");
+        } catch (ComErrorException e) {
+            String logErrorMessage = "Timetracker encountered a communication error.\n";
+            NotificationManager.sendWarningNotification("Communication Error",
+                    "Timetracker encountered a communication error. For details please see intellij Logs");
+            if (e.getError() != null) {
+                log.info(logErrorMessage + e.getError());
+            } else {
+                log.info(logErrorMessage + e.getMessage());
+            }
+        } catch (CommunicatorException e) {
+            e.printStackTrace();
+        }
+        refreshTables();
+    }
+
+    private void refreshTables() {
+        switch (tabbedPaneTables.getSelectedIndex()) {
+            case 0:
+                loadRecentItems();
+                break;
+            case 2:
+                loadFavouriteItems();
+                break;
+            case 1:
+            case 3:
+            default:
+                break;
+
+        }
+    }
+
     private void attachTableSelectionListener(JTable table) {
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
@@ -142,12 +176,12 @@ public class SevenPaceToolWindow implements BranchChangeListener {
             if (table.getSelectedColumn() == 0) {
                 if (favourites.ids.contains(selectedWorkItemId)) {
                     favourites.removeFavourite(selectedWorkItemId);
-                    table.setValueAt(Icon.getByName("Favourite_Out").getIcon(), table.getSelectedRow(), table.getSelectedColumn());
+                    table.setValueAt(Icon.STAR_EMPTY.getIcon(), table.getSelectedRow(), table.getSelectedColumn());
                 } else {
                     favourites.addFavourite(selectedWorkItemId,
                             table.getValueAt(table.getSelectedRow(), 3).toString(),
                             table.getValueAt(table.getSelectedRow(), 4).toString());
-                    table.setValueAt(Icon.getByName("Favourite_In").getIcon(), table.getSelectedRow(), table.getSelectedColumn());
+                    table.setValueAt(Icon.STAR.getIcon(), table.getSelectedRow(), table.getSelectedColumn());
                 }
             }
             if (table.getSelectedColumn() == 4) {
@@ -274,7 +308,7 @@ public class SevenPaceToolWindow implements BranchChangeListener {
         Vector<Vector<Object>> data = new Vector<>();
         for (WorkLog log : logs.getWorkLogs()) {
             Vector<Object> vector = new Vector<>();
-            if (favourites != null && favourites.ids != null && favourites.ids.contains(log.getWorkItem().getId())) {
+            if (favourites != null && favourites.ids != null && favourites.ids.contains(log.getWorkItem().getId().toString())) {
                 vector.add(Icon.STAR.getIcon());
             } else {
                 vector.add(Icon.STAR_EMPTY.getIcon());
@@ -340,7 +374,7 @@ public class SevenPaceToolWindow implements BranchChangeListener {
     //region Actions
     private void startTrackingButtonAction(ActionEvent actionEvent) {
         if (currentState == null) {
-            NotificationManager.getInstance().sendSettingNotification("Communicator not initialized.");
+            NotificationManager.sendSettingNotification("Communicator not initialized.");
             return;
         }
         String text = textFieldSelectedWorkItem.getText();
@@ -355,7 +389,7 @@ public class SevenPaceToolWindow implements BranchChangeListener {
 
     private void resumeStopTrackingCurrent(ActionEvent e) {
         if (currentState == null) {
-            NotificationManager.getInstance().sendSettingNotification("Communicator not initialized.");
+            NotificationManager.sendSettingNotification("Communicator not initialized.");
             return;
         }
         if (TimeTrackingState.tracking.equals(currentState.getTrack().getTrackingState())) {
@@ -413,26 +447,31 @@ public class SevenPaceToolWindow implements BranchChangeListener {
     }
 
     private void startTracking(Integer selectedWorkItemId) {
+        startTracking(selectedWorkItemId, (ActivityTypeSetting) comboBoxActivityType.getSelectedItem());
+    }
+
+    private void startTracking(Integer selectedWorkItemId, ActivityTypeSetting activityType) {
         try {
             currentState = communicator.startTracking(StartTrackingRequest
                     .builder()
-                    .activityTypeId(((ActivityTypeSetting) comboBoxActivityType.getSelectedItem()).getId())
+                    .activityTypeId(activityType.getId())
                     .tfsId(selectedWorkItemId)
                     .build());
             if (!ResponseState.OK.equals(currentState.getTrackSettings().getResponseState())) {
                 switch (currentState.getTrackSettings().getResponseState()) {
                     case Warning:
                     case Error:
-                        NotificationManager.getInstance().sendWarningNotification("Failed to start tracking " + selectedWorkItemId + ".",
+                        NotificationManager.sendWarningNotification("Failed to start tracking " + selectedWorkItemId + ".",
                                 currentState.getTrackSettings().getResponseMessage());
                         break;
                     case AuthError:
-                        NotificationManager.getInstance().sendSettingNotification("Auth Error on starting a Tracking.");
+                        NotificationManager.sendSettingNotification("Auth Error on starting a Tracking.");
                         break;
                 }
                 return;
             }
             updateCurrentTrackedItem();
+            NotificationManager.sendToolWindowNotification("Started tracking of " + selectedWorkItemId, "");
         } catch (CommunicatorException e) {
             log.info("Failed to start tracking of work item with id {}; error: {}", selectedWorkItemId, e.getMessage());
         }
@@ -465,9 +504,9 @@ public class SevenPaceToolWindow implements BranchChangeListener {
         }
         switch (settings.branchCheckoutBehaviour) {
             case DIALOG:
-                StartOnBranchCheckoutDialog dialog = new StartOnBranchCheckoutDialog(workItemId);
+                StartOnBranchCheckoutDialog dialog = new StartOnBranchCheckoutDialog(workItemId, currentState.getSettings().getActivityType());
                 if (dialog.showAndGet()) {
-                    SwingUtilities.invokeLater(() -> startTracking(workItemId));
+                    SwingUtilities.invokeLater(() -> startTracking(workItemId, dialog.getSelectedActivityType()));
                 }
                 return;
             case AUTO_TRACK:

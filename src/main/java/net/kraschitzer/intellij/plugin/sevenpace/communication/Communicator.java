@@ -9,18 +9,17 @@ import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.*;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.request.SelectWorkItemRequest;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.request.StartTrackingRequest;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.request.UpdateTrackRequest;
-import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.Error;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.*;
 import net.kraschitzer.intellij.plugin.sevenpace.model.enums.Reason;
 import net.kraschitzer.intellij.plugin.sevenpace.persistence.SettingsState;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
-import javax.ws.rs.core.Response;
 import javax.ws.rs.core.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -117,7 +116,7 @@ public class Communicator implements ICommunicator {
             return response.readEntity(PinStatus.class);
         } else {
             try {
-                System.out.println(response.readEntity(net.kraschitzer.intellij.plugin.sevenpace.model.api.response.Response.class));
+                System.out.println(response.readEntity(TimetrackerResponse.class));
             } catch (Exception ex) {
                 ex.printStackTrace();
                 System.exit(1);
@@ -229,11 +228,11 @@ public class Communicator implements ICommunicator {
         return request(HTTPMethod.POST, "/api" + url, Entity.json(body), responseType, true);
     }
 
-    private <T> T apiPostToken(String url, MultivaluedMap<String, String> form, Class<T> responseType) throws ComErrorParseException, ComException, ComHostNotFoundException {
+    private <T> T apiPostToken(String url, MultivaluedMap<String, String> form, Class<T> responseType) throws ComErrorParseException, ComException, ComHostNotFoundException, ComErrorException {
         return request(HTTPMethod.POST, url, Entity.form(form), responseType, false);
     }
 
-    private <T> T request(HTTPMethod method, String url, Entity entity, Class<T> responseType, boolean authenticated) throws ComErrorParseException, ComException, ComHostNotFoundException {
+    private <T> T request(HTTPMethod method, String url, Entity entity, Class<T> responseType, boolean authenticated) throws ComErrorParseException, ComException, ComHostNotFoundException, ComErrorException {
         Invocation.Builder ib = client.target(protocolAddress + url + "?api-version=2.1")
                 .request(MediaType.APPLICATION_JSON_TYPE);
         if (authenticated) {
@@ -256,10 +255,14 @@ public class Communicator implements ICommunicator {
         } else if (response != null && response.getStatus() == HttpStatus.SC_NOT_FOUND) {
             throw new ComHostNotFoundException();
         } else {
+            if (response == null) {
+                throw new ComErrorParseException("Response was null.");
+            }
+            response.bufferEntity();
             try {
-                throw new ComErrorException(response.readEntity(Error.class));
-            } catch (Exception e) {
-                throw new ComErrorParseException("Failed to parse error communication error", e);
+                throw new ComErrorException(response.readEntity(TimetrackerResponse.class).getError());
+            } catch (ProcessingException e) {
+                throw new ComErrorParseException("Failed to parse error communication error '" + response.readEntity(String.class) + "'", e);
             }
         }
     }

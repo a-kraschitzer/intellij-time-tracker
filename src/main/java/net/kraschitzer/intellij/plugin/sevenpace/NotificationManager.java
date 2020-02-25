@@ -5,25 +5,27 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.wm.ToolWindowId;
 import net.kraschitzer.intellij.plugin.sevenpace.view.Settings;
 
 import javax.validation.constraints.NotNull;
 
 public class NotificationManager {
 
-    public static NotificationManager getInstance() {
-        return ServiceManager.getService(NotificationManager.class);
-    }
+    private static final NotificationGroup DEFAULT_NOTIFICATION_GROUP = new NotificationGroup(
+            "Timetracker Notifications", NotificationDisplayType.BALLOON, true);
+    public static final NotificationGroup IMPORTANT_NOTIFICATION_GROUP = new NotificationGroup(
+            "Timetracker Important Notifications", NotificationDisplayType.STICKY_BALLOON, true);
+    public static final NotificationGroup TOOL_WINDOW_NOTIFICATION_GROUP = NotificationGroup.toolWindowGroup(
+            "Timetracker Toolwindow Notifications", ToolWindowId.TODO_VIEW);
+    public static final NotificationGroup TOOL_WINDOW2_NOTIFICATION_GROUP = new NotificationGroup(
+            "Timetracker Toolwindow Notifications", NotificationDisplayType.TOOL_WINDOW, true, "Timetracker");
 
-    private final NotificationGroup localNotificationGroup = new NotificationGroup(
-            "7Pace Timetracker Notifications", NotificationDisplayType.BALLOON, true);
-
-    public void sendSettingNotification(String msg) {
+    public static void sendSettingNotification(String msg) {
         ApplicationManager.getApplication().invokeLater(() -> {
-            Notification notification = localNotificationGroup
+            Notification notification = DEFAULT_NOTIFICATION_GROUP
                     .createNotification(msg, "Go to Settings to generate a PIN and link with your 7Pace Server!</html>",
                             NotificationType.ERROR,
                             new NotificationListener.UrlOpeningListener(true))
@@ -40,12 +42,19 @@ public class NotificationManager {
         });
     }
 
-    public void sendWarningNotification(String title, String msg) {
+    public static void sendWarningNotification(String title, String msg) {
         ApplicationManager.getApplication().invokeLater(() -> {
-            Notification notification = localNotificationGroup
+            Notification notification = IMPORTANT_NOTIFICATION_GROUP
                     .createNotification(title, msg,
                             NotificationType.WARNING,
                             new NotificationListener.UrlOpeningListener(true));
+            Notifications.Bus.notify(notification);
+        });
+    }
+
+    public static void sendToolWindowNotification(String title, String msg) {
+        ApplicationManager.getApplication().invokeLater(() -> {
+            Notification notification = TOOL_WINDOW_NOTIFICATION_GROUP.createNotification(title, msg, NotificationType.INFORMATION, null);
             Notifications.Bus.notify(notification);
         });
     }

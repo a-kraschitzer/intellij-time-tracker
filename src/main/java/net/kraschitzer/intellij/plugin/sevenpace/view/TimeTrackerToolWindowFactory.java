@@ -7,14 +7,14 @@ import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
 import org.jetbrains.annotations.NotNull;
 
-public class SevenPaceToolWindowFactory implements ToolWindowFactory {
+public class TimeTrackerToolWindowFactory implements ToolWindowFactory {
 
     @Override
     // Create the tool window content.
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
-        SevenPaceToolWindow myToolWindow = new SevenPaceToolWindow(toolWindow);
+        TimeTrackerToolWindow timeTrackerToolWindow = new TimeTrackerToolWindow(toolWindow);
         ContentFactory contentFactory = ContentFactory.SERVICE.getInstance();
-        Content content = contentFactory.createContent(myToolWindow.getContent(), "", false);
+        Content content = contentFactory.createContent(timeTrackerToolWindow.getContent(), "", false);
         toolWindow.getContentManager().addContent(content);
     }
 

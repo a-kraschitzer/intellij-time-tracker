@@ -3,7 +3,6 @@ package net.kraschitzer.intellij.plugin.sevenpace.view;
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.options.ConfigurationException;
-import com.intellij.openapi.ui.ComboBox;
 import lombok.extern.slf4j.Slf4j;
 import net.kraschitzer.intellij.plugin.sevenpace.communication.ICommunicator;
 import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.ComHostNotFoundException;
@@ -38,13 +37,16 @@ public class Settings implements Configurable {
     private JTextField textFieldProjectId;
     private JLabel labelError;
 
-
     private final ICommunicator communicator;
     private SettingsState settings = ServiceManager.getService(SettingsState.class);
 
     private String url;
 
     public Settings() {
+        for (BranchCheckoutBehaviour beh : BranchCheckoutBehaviour.values()) {
+            comboBoxBranchCheckoutBehaviour.addItem(beh);
+        }
+        comboBoxBranchCheckoutBehaviour.setSelectedItem(settings.branchCheckoutBehaviour);
         buttonGeneratePin.addActionListener(e -> generatePin());
         textFieldUrl.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -78,25 +80,23 @@ public class Settings implements Configurable {
     @Nls(capitalization = Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
-        return "Timetracker (7Pace)";
+        return "TimeTracker (7Pace)";
     }
 
     @Nullable
     @Override
     public JComponent createComponent() {
-        comboBoxBranchCheckoutBehaviour = new ComboBox<>(BranchCheckoutBehaviour.values());
         return contentPanel;
     }
 
     @Override
     public boolean isModified() {
-        return !textFieldUrl.getText().equals(url);
+        return !textFieldUrl.getText().equals(url) || !settings.branchCheckoutBehaviour.equals(comboBoxBranchCheckoutBehaviour.getSelectedItem());
     }
 
     @Override
     public void apply() throws ConfigurationException {
         saveInput();
-        clearCachedInfo();
         communicator.resetInitialization();
         populateUserInformation();
         try {
@@ -115,12 +115,10 @@ public class Settings implements Configurable {
             throw new ConfigurationException("The given url '" + url + "' is invalid!");
         }
         settings.url = url;
-        settings.branchCheckoutBehaviour = comboBoxBranchCheckoutBehaviour
-                .getItemAt(comboBoxBranchCheckoutBehaviour.getSelectedIndex());
+        settings.branchCheckoutBehaviour = (BranchCheckoutBehaviour) comboBoxBranchCheckoutBehaviour.getSelectedItem();
     }
 
     private void createUIComponents() {
-        comboBoxBranchCheckoutBehaviour = new ComboBox<>(BranchCheckoutBehaviour.values());
     }
 
     private void generatePin() {

@@ -1,10 +1,14 @@
 package net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions;
 
-public class ComErrorParseException extends CommunicatorException {
+public class ComErrorParseException extends ComErrorException {
 
 
     public ComErrorParseException() {
         super();
+    }
+
+    public ComErrorParseException(String msg) {
+        super(msg);
     }
 
     public ComErrorParseException(Throwable t) {

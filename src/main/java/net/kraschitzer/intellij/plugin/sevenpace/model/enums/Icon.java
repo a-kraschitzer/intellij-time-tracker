@@ -31,8 +31,11 @@ public enum Icon {
     }
 
     public static Icon getByName(String name) {
+        if (name == null) {
+            return FALLBACK;
+        }
         for (Icon i : EnumSet.allOf(Icon.class)) {
-            if (i.workItemType.equals(name)) {
+            if (name.equals(i.workItemType)) {
                 return i;
             }
         }

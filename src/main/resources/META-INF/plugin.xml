@@ -21,7 +21,7 @@
                     anchor="bottom"
                     secondary="true"
                     icon="/net/kraschitzer/intellij/plugin/sevenpace/icons/sevenicon.png"
-                    factoryClass="net.kraschitzer.intellij.plugin.sevenpace.view.SevenPaceToolWindowFactory"/>
+                    factoryClass="net.kraschitzer.intellij.plugin.sevenpace.view.TimeTrackerToolWindowFactory"/>
         <applicationService serviceInterface="net.kraschitzer.intellij.plugin.sevenpace.communication.ICommunicator"
                             serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.communication.Communicator"/>
         <applicationService serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.NotificationManager"/>
@@ -31,7 +31,7 @@
                 serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.persistence.SettingsState"/>
     </extensions>
     <projectListeners>
-        <listener class="net.kraschitzer.intellij.plugin.sevenpace.view.SevenPaceToolWindow"
+        <listener class="net.kraschitzer.intellij.plugin.sevenpace.view.TimeTrackerToolWindow"
                   topic="com.intellij.openapi.vcs.BranchChangeListener">
         </listener>
     </projectListeners>
