@@ -23,4 +23,10 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
-      run: ./gradlew build
+      run: ./gradlew buildPlugin
+    - name: Publish Artifact
+    - run: git_hash=$(git rev-parse --short "$GITHUB_SHA")
+    - uses: actions/upload-artifact@v1
+      with:
+        name: intellij-time-tracker-$git_hash.zip
+        path: build/distributions/intellij-time-tracker.zip
