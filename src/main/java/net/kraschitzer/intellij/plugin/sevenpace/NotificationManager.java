@@ -7,8 +7,8 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.wm.ToolWindowId;
 import net.kraschitzer.intellij.plugin.sevenpace.view.Settings;
+import net.kraschitzer.intellij.plugin.sevenpace.view.TimeTrackerToolWindow;
 
 import javax.validation.constraints.NotNull;
 
@@ -19,9 +19,9 @@ public class NotificationManager {
     public static final NotificationGroup IMPORTANT_NOTIFICATION_GROUP = new NotificationGroup(
             "Timetracker Important Notifications", NotificationDisplayType.STICKY_BALLOON, true);
     public static final NotificationGroup TOOL_WINDOW_NOTIFICATION_GROUP = NotificationGroup.toolWindowGroup(
-            "Timetracker Toolwindow Notifications", ToolWindowId.TODO_VIEW);
-    public static final NotificationGroup TOOL_WINDOW2_NOTIFICATION_GROUP = new NotificationGroup(
-            "Timetracker Toolwindow Notifications", NotificationDisplayType.TOOL_WINDOW, true, "Timetracker");
+            "Timetracker Toolwindow Notifications", TimeTrackerToolWindow.TOOLWINDOW_ID);
+    //public static final NotificationGroup TOOL_WINDOW2_NOTIFICATION_GROUP = new NotificationGroup(
+    //        "Timetracker Toolwindow Notifications", NotificationDisplayType.TOOL_WINDOW, true, "Timetracker");
 
     public static void sendSettingNotification(String msg) {
         ApplicationManager.getApplication().invokeLater(() -> {

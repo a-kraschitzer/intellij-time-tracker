@@ -1,11 +1,14 @@
 package net.kraschitzer.intellij.plugin.sevenpace.model.api.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Data;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.enums.StoppedTrackType;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.enums.TimeTrackingState;
+import net.kraschitzer.intellij.plugin.sevenpace.utils.DateDeserializer;
 
 import javax.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -24,7 +27,8 @@ public class Track {
     @NotNull
     private Integer totalTeamLength;
     private Integer trackAdjustmentLength;
-    private String currentTrackStartedDateTime;
+    @JsonDeserialize(using = DateDeserializer.class)
+    private LocalDateTime currentTrackStartedDateTime;
     @NotNull
     private String trackStatusChangeDate;
     private Integer trackTimeZone;

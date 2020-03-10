@@ -1,7 +1,9 @@
 package net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions;
 
+import lombok.Getter;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.Error;
 
+@Getter
 public class ComErrorException extends CommunicatorException {
 
     private Error error;

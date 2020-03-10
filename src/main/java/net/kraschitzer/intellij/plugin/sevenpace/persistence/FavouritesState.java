@@ -16,14 +16,11 @@ import java.util.Map;
 
 public class FavouritesState implements PersistentStateComponent<FavouritesState> {
 
-    public List<String> ids;
-    public Map<String, String> titles;
-    public Map<String, String> types;
+    public List<String> ids = new ArrayList<>();
+    public Map<String, String> titles = new HashMap<>();
+    public Map<String, String> types = new HashMap<>();
 
     public FavouritesState() {
-        ids = new ArrayList<>();
-        titles = new HashMap<>();
-        types = new HashMap<>();
     }
 
     public void addFavourite(String selectedWorkItemId, String type, String title) {
@@ -40,6 +37,10 @@ public class FavouritesState implements PersistentStateComponent<FavouritesState
             types.remove(id);
             ids.remove(id);
         }
+    }
+
+    public boolean containsId(String id) {
+        return ids != null && ids.contains(id);
     }
 
     @Nullable

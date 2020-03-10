@@ -4,7 +4,7 @@ import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.util.xmlb.XmlSerializerUtil;
-import net.kraschitzer.intellij.plugin.sevenpace.model.enums.BranchCheckoutBehaviour;
+import net.kraschitzer.intellij.plugin.sevenpace.model.enums.StartTrackingBehaviour;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,7 +17,10 @@ public class SettingsState implements PersistentStateComponent<SettingsState> {
     public String refreshToken;
     public String expires;
 
-    public BranchCheckoutBehaviour branchCheckoutBehaviour = BranchCheckoutBehaviour.DIALOG;
+    public StartTrackingBehaviour branchCheckoutBehaviour = StartTrackingBehaviour.DIALOG;
+    public StartTrackingBehaviour onActivityBehaviour = StartTrackingBehaviour.OFF;
+    public int autoStopActionDelay = 300;
+    public boolean autoStop = true;
 
     public SettingsState() {
     }
