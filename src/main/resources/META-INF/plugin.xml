@@ -4,14 +4,14 @@
     <vendor url="https://github.com/a-kraschitzer">Andreas Kraschitzer</vendor>
 
     <description>
-        <![CDATA[[
+        <![CDATA[
         Enables tracking of AzureDevops work items through the open REST API of 7Pace from within IntelliJ IDE.<br>
         Alpha release of the plugin.<br>This plugin might be unstable and crash your IDE.
         ]]>
     </description>
 
     <version>alpha-0.2</version>
-    <idea-version since-build="193.6015.39"></idea-version>
+    <idea-version since-build="193.6015.39"/>
 
     <depends>com.intellij.modules.platform</depends>
 
@@ -31,8 +31,16 @@
                 serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.persistence.SettingsState"/>
     </extensions>
     <projectListeners>
-        <listener class="net.kraschitzer.intellij.plugin.sevenpace.view.TimeTrackerToolWindow"
+        <listener class="net.kraschitzer.intellij.plugin.sevenpace.EventHandler"
                   topic="com.intellij.openapi.vcs.BranchChangeListener">
         </listener>
     </projectListeners>
+    <applicationListeners>
+        <listener class="net.kraschitzer.intellij.plugin.sevenpace.EventHandler"
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener">
+        </listener>
+        <listener class="net.kraschitzer.intellij.plugin.sevenpace.EventHandler"
+                  topic="com.intellij.openapi.vfs.newvfs.BulkFileListener">
+        </listener>
+    </applicationListeners>
 </idea-plugin>

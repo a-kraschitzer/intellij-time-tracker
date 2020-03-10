@@ -1,6 +1,6 @@
 package net.kraschitzer.intellij.plugin.sevenpace.model.enums;
 
-public enum BranchCheckoutBehaviour {
+public enum StartTrackingBehaviour {
     DIALOG("Show Dialog to start tracking"),
     AUTO_TRACK("Automatically start tracking"),
     OFF("Do nothing"),
@@ -8,7 +8,7 @@ public enum BranchCheckoutBehaviour {
 
     private String comboText;
 
-    BranchCheckoutBehaviour(String comboText) {
+    StartTrackingBehaviour(String comboText) {
         this.comboText = comboText;
     }
 

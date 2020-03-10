@@ -1,11 +1,9 @@
 package net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions;
 
-public class ComErrorParseException extends ComErrorException {
+import lombok.NoArgsConstructor;
 
-
-    public ComErrorParseException() {
-        super();
-    }
+@NoArgsConstructor
+public class ComErrorParseException extends CommunicatorException {
 
     public ComErrorParseException(String msg) {
         super(msg);

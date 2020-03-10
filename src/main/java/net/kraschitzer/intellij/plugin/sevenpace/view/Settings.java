@@ -10,7 +10,7 @@ import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.ComHos
 import net.kraschitzer.intellij.plugin.sevenpace.communication.exceptions.CommunicatorException;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.*;
 import net.kraschitzer.intellij.plugin.sevenpace.model.api.response.enums.PinStatusEnum;
-import net.kraschitzer.intellij.plugin.sevenpace.model.enums.BranchCheckoutBehaviour;
+import net.kraschitzer.intellij.plugin.sevenpace.model.enums.StartTrackingBehaviour;
 import net.kraschitzer.intellij.plugin.sevenpace.persistence.SettingsState;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
@@ -28,7 +28,8 @@ public class Settings implements Configurable {
     private JTextField textFieldUrl;
     private JButton buttonGeneratePin;
 
-    private JComboBox<BranchCheckoutBehaviour> comboBoxBranchCheckoutBehaviour;
+    private JComboBox<StartTrackingBehaviour> comboBoxBranchCheckoutBehaviour;
+    private JComboBox<StartTrackingBehaviour> comboBoxOnActivityBehaviour;
 
     private JPanel contentPanel;
     private JPanel infoPanel;
@@ -36,6 +37,8 @@ public class Settings implements Configurable {
     private JTextField textFieldEmail;
     private JTextField textFieldProjectId;
     private JLabel labelError;
+    private JSpinner spinnerAutoActionDelay;
+    private JCheckBox checkBoxEnableAutoStop;
 
     private final ICommunicator communicator;
     private SettingsState settings = ServiceManager.getService(SettingsState.class);
@@ -43,10 +46,25 @@ public class Settings implements Configurable {
     private String url;
 
     public Settings() {
-        for (BranchCheckoutBehaviour beh : BranchCheckoutBehaviour.values()) {
+        initializeComponents();
+        communicator = ICommunicator.getInstance();
+
+        try {
+            communicator.initialize();
+            communicator.authenticate();
+            populateUserInformation();
+        } catch (Exception ignored) {
+            //ignored
+        }
+    }
+
+    public void initializeComponents() {
+        for (StartTrackingBehaviour beh : StartTrackingBehaviour.values()) {
             comboBoxBranchCheckoutBehaviour.addItem(beh);
+            comboBoxOnActivityBehaviour.addItem(beh);
         }
         comboBoxBranchCheckoutBehaviour.setSelectedItem(settings.branchCheckoutBehaviour);
+        comboBoxOnActivityBehaviour.setSelectedItem(settings.onActivityBehaviour);
         buttonGeneratePin.addActionListener(e -> generatePin());
         textFieldUrl.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -64,16 +82,10 @@ public class Settings implements Configurable {
                 resetError();
             }
         });
-        communicator = ICommunicator.getInstance();
-
         url = settings.url;
         textFieldUrl.setText(url != null ? url : "");
-        try {
-            communicator.initialize();
-            communicator.authenticate();
-        } catch (Exception ex) {
-        }
-        populateUserInformation();
+        spinnerAutoActionDelay.setValue(settings.autoStopActionDelay);
+        checkBoxEnableAutoStop.setSelected(settings.autoStop);
     }
 
 
@@ -91,7 +103,12 @@ public class Settings implements Configurable {
 
     @Override
     public boolean isModified() {
-        return !textFieldUrl.getText().equals(url) || !settings.branchCheckoutBehaviour.equals(comboBoxBranchCheckoutBehaviour.getSelectedItem());
+        return (!textFieldUrl.getText().equals(url)
+                || !settings.branchCheckoutBehaviour.equals(comboBoxBranchCheckoutBehaviour.getSelectedItem())
+                || !settings.onActivityBehaviour.equals(comboBoxOnActivityBehaviour.getSelectedItem())
+                || settings.autoStopActionDelay != (int) spinnerAutoActionDelay.getValue()
+                || settings.autoStop != checkBoxEnableAutoStop.isSelected()
+        );
     }
 
     @Override
@@ -103,7 +120,6 @@ public class Settings implements Configurable {
             communicator.initialize();
         } catch (CommunicatorException e) {
             setError("Failed to initialize communicator.");
-            return;
         }
     }
 
@@ -115,7 +131,10 @@ public class Settings implements Configurable {
             throw new ConfigurationException("The given url '" + url + "' is invalid!");
         }
         settings.url = url;
-        settings.branchCheckoutBehaviour = (BranchCheckoutBehaviour) comboBoxBranchCheckoutBehaviour.getSelectedItem();
+        settings.branchCheckoutBehaviour = (StartTrackingBehaviour) comboBoxBranchCheckoutBehaviour.getSelectedItem();
+        settings.onActivityBehaviour = (StartTrackingBehaviour) comboBoxOnActivityBehaviour.getSelectedItem();
+        settings.autoStopActionDelay = (Integer) spinnerAutoActionDelay.getValue();
+        settings.autoStop = checkBoxEnableAutoStop.isSelected();
     }
 
     private void createUIComponents() {
@@ -166,7 +185,7 @@ public class Settings implements Configurable {
             }
 
             if (PinStatusEnum.Validated.equals(status.getStatus())) {
-                Token token = null;
+                final Token token;
                 try {
                     token = communicator.token(pin.getSecret());
                 } catch (CommunicatorException e) {
