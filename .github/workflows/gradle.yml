@@ -25,7 +25,7 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew buildPlugin
     - name: get commit hash
-      run: new_filename=intellij-time-tracker_$(git rev-parse --short "$GITHUB_SHA")
+      run: export new_filename=intellij-time-tracker_$(git rev-parse --short "$GITHUB_SHA")
     - name: rename plugin zip
       run: mv build/distributions/intellij-time-tracker.zip build/distributions/${new_filename}.zip
     - name: Publish Artifact
