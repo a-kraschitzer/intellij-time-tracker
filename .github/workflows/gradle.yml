@@ -29,7 +29,17 @@ jobs:
     - name: testing
       run: pwd
     - name: testing
-      run: export test_var="123
+      run: cd build/distributions
+    - name: testing
+      run: pwd
+    - name: testing
+      run: ls
+    - name: testing
+      run: cp intellij-time-tracker.zip copyOfFile.zip
+    - name: testing
+      run: ls
+    - name: testing
+      run: export test_var="123"
     - name: testing
       run: echo $test_var + ${test_var}
     - name: get commit hash
