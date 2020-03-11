@@ -27,15 +27,11 @@ jobs:
     - name: testing
       run: ls;pwd;cd build/distributions;pwd;ls;cp intellij-time-tracker.zip copyOfFile.zip;ls;
     - name: testing
-      run: export test_var="123"
+      run: ls build/distributions/
     - name: testing
-      run: echo $test_var + ${test_var}
-    - name: get commit hash
-      run: export new_filename=intellij-time-tracker_$(git rev-parse --short "$GITHUB_SHA")
-    - name: rename plugin zip
-      run: mv build/distributions/intellij-time-tracker.zip build/distributions/${new_filename}.zip
+      run: new_filename=intellij-time-tracker_$(git rev-parse --short "$GITHUB_SHA");echo $new_filename + ${new_filename}
     - name: Publish Artifact
       uses: actions/upload-artifact@v1
       with:
         name: plugin
-        path: build/distributions/${new_filename}.zip
+        path: build/distributions/*
