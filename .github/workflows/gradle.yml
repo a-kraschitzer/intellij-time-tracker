@@ -24,6 +24,14 @@ jobs:
       run: chmod +x gradlew
     - name: Build with Gradle
       run: ./gradlew buildPlugin
+    - name: testing
+      run: ls
+    - name: testing
+      run: pwd
+    - name: testing
+      run: export test_var="123
+    - name: testing
+      run: echo $test_var + ${test_var}
     - name: get commit hash
       run: export new_filename=intellij-time-tracker_$(git rev-parse --short "$GITHUB_SHA")
     - name: rename plugin zip
