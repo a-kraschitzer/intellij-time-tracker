@@ -25,19 +25,7 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew buildPlugin
     - name: testing
-      run: ls
-    - name: testing
-      run: pwd
-    - name: testing
-      run: cd build/distributions
-    - name: testing
-      run: pwd
-    - name: testing
-      run: ls
-    - name: testing
-      run: cp intellij-time-tracker.zip copyOfFile.zip
-    - name: testing
-      run: ls
+      run: ls;pwd;cd build/distributions;pwd;ls;cp intellij-time-tracker.zip copyOfFile.zip;ls;
     - name: testing
       run: export test_var="123"
     - name: testing
