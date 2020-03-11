@@ -1,5 +1,5 @@
-<idea-plugin url="https://github.com/a-kraschitzer/7pace-intellij-tracker">
-    <id>net.kraschitzer.intellij.plugin.sevenpace.7pace-intellij-plugin</id>
+<idea-plugin url="https://github.com/a-kraschitzer/intellij-time-tracker">
+    <id>net.kraschitzer.intellij.plugin.time_tracker.intellij-time-tracker</id>
     <name>Time Tracker (7Pace)</name>
     <vendor url="https://github.com/a-kraschitzer">Andreas Kraschitzer</vendor>
 
@@ -16,30 +16,30 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationConfigurable instance="net.kraschitzer.intellij.plugin.sevenpace.view.Settings"/>
+        <applicationConfigurable instance="net.kraschitzer.intellij.plugin.time_tracker.view.Settings"/>
         <toolWindow id="Timetracker"
                     anchor="bottom"
                     secondary="true"
-                    icon="/net/kraschitzer/intellij/plugin/sevenpace/icons/sevenicon.png"
-                    factoryClass="net.kraschitzer.intellij.plugin.sevenpace.view.TimeTrackerToolWindowFactory"/>
-        <applicationService serviceInterface="net.kraschitzer.intellij.plugin.sevenpace.communication.ICommunicator"
-                            serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.communication.Communicator"/>
-        <applicationService serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.NotificationManager"/>
+                    icon="/net/kraschitzer/intellij/plugin/time_tracker/icons/sevenicon.png"
+                    factoryClass="net.kraschitzer.intellij.plugin.time_tracker.view.TimeTrackerToolWindowFactory"/>
+        <applicationService serviceInterface="net.kraschitzer.intellij.plugin.time_tracker.communication.ICommunicator"
+                            serviceImplementation="net.kraschitzer.intellij.plugin.time_tracker.communication.Communicator"/>
+        <applicationService serviceImplementation="net.kraschitzer.intellij.plugin.time_tracker.NotificationManager"/>
         <applicationService
-                serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.persistence.FavouritesState"/>
+                serviceImplementation="net.kraschitzer.intellij.plugin.time_tracker.persistence.FavouritesState"/>
         <applicationService
-                serviceImplementation="net.kraschitzer.intellij.plugin.sevenpace.persistence.SettingsState"/>
+                serviceImplementation="net.kraschitzer.intellij.plugin.time_tracker.persistence.SettingsState"/>
     </extensions>
     <projectListeners>
-        <listener class="net.kraschitzer.intellij.plugin.sevenpace.EventHandler"
+        <listener class="net.kraschitzer.intellij.plugin.time_tracker.EventHandler"
                   topic="com.intellij.openapi.vcs.BranchChangeListener">
         </listener>
     </projectListeners>
     <applicationListeners>
-        <listener class="net.kraschitzer.intellij.plugin.sevenpace.EventHandler"
+        <listener class="net.kraschitzer.intellij.plugin.time_tracker.EventHandler"
                   topic="com.intellij.openapi.fileEditor.FileEditorManagerListener">
         </listener>
-        <listener class="net.kraschitzer.intellij.plugin.sevenpace.EventHandler"
+        <listener class="net.kraschitzer.intellij.plugin.time_tracker.EventHandler"
                   topic="com.intellij.openapi.vfs.newvfs.BulkFileListener">
         </listener>
     </applicationListeners>
