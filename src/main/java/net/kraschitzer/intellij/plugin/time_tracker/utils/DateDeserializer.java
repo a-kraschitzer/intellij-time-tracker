@@ -59,11 +59,14 @@ public class DateDeserializer extends JsonDeserializer<LocalDateTime> {
 
 
         timeFormats = new LinkedHashMap<>();
-        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.\\d{7}$"), "'T'HH:mm:ss.SSSSSSS"); //20:35:50.4812347
-        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}$"), "'T'HH:mm:ss.SSSSSS"); //20:35:50.4812347
-        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.\\d{5}$"), "'T'HH:mm:ss.SSSSS"); //20:35:50.4812347
-        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.\\d{4}$"), "'T'HH:mm:ss.SSSS"); //20:35:50.4812347
-        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}$"), "'T'HH:mm:ss.SSS"); //20:35:50.487
+        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.\\d{7}$"), "'T'HH:mm:ss.SSSSSSS"); //T20:35:50.4812347
+        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}$"), "'T'HH:mm:ss.SSSSSS"); //T20:35:50.4812347
+        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.\\d{5}$"), "'T'HH:mm:ss.SSSSS"); //T20:35:50.4812347
+        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.\\d{4}$"), "'T'HH:mm:ss.SSSS"); //T20:35:50.4812347
+        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}$"), "'T'HH:mm:ss.SSS"); //T20:35:50.487
+        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.\\d{2}$"), "'T'HH:mm:ss.SS"); //T20:35:50.48
+        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.\\d{1}$"), "'T'HH:mm:ss.S"); //T20:35:50.4
+        timeFormats.put(Pattern.compile(".*T\\d{2}:\\d{2}:\\d{2}\\.$"), "'T'HH:mm:ss."); //T20:35:50.
         timeFormats.put(Pattern.compile(".* \\d{2}:\\d{2}:\\d{2} \\w{3}$"), " HH:mm:ss zzz");// 20:32:20 UTC
         timeFormats.put(Pattern.compile(".* \\d{2}:\\d{2}:\\d{2}$"), " HH:mm:ss"); //18:08:23
         timeFormats.put(Pattern.compile(".* \\d:\\d{2} (AM|PM)$"), " h:mm aa"); //6:08 PM

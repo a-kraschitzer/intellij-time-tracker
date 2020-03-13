@@ -30,7 +30,7 @@ import java.util.Collections;
 import java.util.Optional;
 
 @Slf4j
-public class Communicator implements ICommunicator {
+public class CommunicatorSevenPaceAPI implements ICommunicator {
 
     private static final String PROTOCOL = "https://";
 
@@ -43,7 +43,7 @@ public class Communicator implements ICommunicator {
     private boolean initialized = false;
     private boolean authenticated = false;
 
-    private Communicator() {
+    private CommunicatorSevenPaceAPI() {
         System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
     }
 
@@ -220,19 +220,19 @@ public class Communicator implements ICommunicator {
         return authenticated;
     }
 
-    private <T> T apiGet(String url, Class<T> responseType) throws ComErrorException, ComErrorParseException, ComException, ComHostNotFoundException {
+    private <T> T apiGet(String url, Class<T> responseType) throws ComErrorException, ComErrorParseException, ComException, ComHostNotFoundException, ComParseException {
         return request(HTTPMethod.GET, "/api" + url, null, responseType, true);
     }
 
-    private <T> T apiPostJson(String url, Object body, Class<T> responseType) throws ComErrorException, ComErrorParseException, ComException, ComHostNotFoundException {
+    private <T> T apiPostJson(String url, Object body, Class<T> responseType) throws ComErrorException, ComErrorParseException, ComException, ComHostNotFoundException, ComParseException {
         return request(HTTPMethod.POST, "/api" + url, Entity.json(body), responseType, true);
     }
 
-    private <T> T apiPostToken(String url, MultivaluedMap<String, String> form, Class<T> responseType) throws ComErrorParseException, ComException, ComHostNotFoundException, ComErrorException {
+    private <T> T apiPostToken(String url, MultivaluedMap<String, String> form, Class<T> responseType) throws ComErrorParseException, ComException, ComHostNotFoundException, ComErrorException, ComParseException {
         return request(HTTPMethod.POST, url, Entity.form(form), responseType, false);
     }
 
-    private <T> T request(HTTPMethod method, String url, Entity entity, Class<T> responseType, boolean authenticated) throws ComErrorParseException, ComException, ComHostNotFoundException, ComErrorException {
+    private <T> T request(HTTPMethod method, String url, Entity entity, Class<T> responseType, boolean authenticated) throws ComErrorParseException, ComException, ComHostNotFoundException, ComErrorException, ComParseException {
         Invocation.Builder ib = client.target(protocolAddress + url + "?api-version=2.1")
                 .request(MediaType.APPLICATION_JSON_TYPE);
         if (authenticated) {
@@ -251,7 +251,11 @@ public class Communicator implements ICommunicator {
         }
         Response response = in.invoke();
         if (response != null && response.getStatus() - 200 < 100) {
-            return response.readEntity(responseType);
+            try {
+                return response.readEntity(responseType);
+            } catch (ProcessingException e) {
+                throw new ComParseException("Failed to parse response:'" + response.readEntity(String.class) + "'", e);
+            }
         } else if (response != null && response.getStatus() == HttpStatus.SC_NOT_FOUND) {
             throw new ComHostNotFoundException();
         } else {

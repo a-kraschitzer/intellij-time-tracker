@@ -23,7 +23,7 @@
                     icon="/net/kraschitzer/intellij/plugin/time_tracker/icons/sevenicon.png"
                     factoryClass="net.kraschitzer.intellij.plugin.time_tracker.view.TimeTrackerToolWindowFactory"/>
         <applicationService serviceInterface="net.kraschitzer.intellij.plugin.time_tracker.communication.ICommunicator"
-                            serviceImplementation="net.kraschitzer.intellij.plugin.time_tracker.communication.Communicator"/>
+                            serviceImplementation="net.kraschitzer.intellij.plugin.time_tracker.communication.CommunicatorSevenPaceAPI"/>
         <applicationService serviceImplementation="net.kraschitzer.intellij.plugin.time_tracker.NotificationManager"/>
         <applicationService
                 serviceImplementation="net.kraschitzer.intellij.plugin.time_tracker.persistence.FavouritesState"/>
