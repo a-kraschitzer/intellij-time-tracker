@@ -15,6 +15,10 @@ public enum Icon {
     STAR(null, "star2.png"),
     STAR_EMPTY(null, "star_empty2.png"),
     FALLBACK(null, "fallback.png"),
+    APP_ICON(null, "app_icon.png"),
+    APP_ICON_ACTIVE(null, "app_icon_active.png"),
+    APP_ICON_DARK(null, "app_icon_dark.png"),
+    APP_ICON_ACTIVE_DARK(null, "app_icon_active_dark.png"),
     ;
     private static final String PATH = "/net/kraschitzer/intellij/plugin/time_tracker/icons/";
 

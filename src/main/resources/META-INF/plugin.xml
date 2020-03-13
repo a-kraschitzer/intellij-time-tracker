@@ -6,11 +6,11 @@
     <description>
         <![CDATA[
         Enables tracking of AzureDevops work items through the open REST API of 7Pace from within IntelliJ IDE.<br>
-        Alpha release of the plugin.<br>This plugin might be unstable and crash your IDE.
+        Beta release of the plugin.<br>This plugin might be unstable and crash your IDE.
         ]]>
     </description>
 
-    <version>alpha-0.2</version>
+    <version>beta-0.8</version>
     <idea-version since-build="193.6015.39"/>
 
     <depends>com.intellij.modules.platform</depends>
@@ -20,7 +20,7 @@
         <toolWindow id="Timetracker"
                     anchor="bottom"
                     secondary="true"
-                    icon="/net/kraschitzer/intellij/plugin/time_tracker/icons/sevenicon.png"
+                    icon="/net/kraschitzer/intellij/plugin/time_tracker/icons/app_icon_dark.png"
                     factoryClass="net.kraschitzer.intellij.plugin.time_tracker.view.TimeTrackerToolWindowFactory"/>
         <applicationService serviceInterface="net.kraschitzer.intellij.plugin.time_tracker.communication.ICommunicator"
                             serviceImplementation="net.kraschitzer.intellij.plugin.time_tracker.communication.CommunicatorSevenPaceAPI"/>

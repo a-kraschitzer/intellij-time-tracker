@@ -14,6 +14,7 @@ import net.kraschitzer.intellij.plugin.time_tracker.NotificationManager;
 import net.kraschitzer.intellij.plugin.time_tracker.communication.ICommunicator;
 import net.kraschitzer.intellij.plugin.time_tracker.communication.exceptions.ComErrorException;
 import net.kraschitzer.intellij.plugin.time_tracker.communication.exceptions.ComNotInitializedException;
+import net.kraschitzer.intellij.plugin.time_tracker.communication.exceptions.ComParseException;
 import net.kraschitzer.intellij.plugin.time_tracker.communication.exceptions.CommunicatorException;
 import net.kraschitzer.intellij.plugin.time_tracker.model.api.request.StartTrackingRequest;
 import net.kraschitzer.intellij.plugin.time_tracker.model.api.response.Settings;
@@ -51,6 +52,8 @@ import java.util.stream.Collectors;
 public class TimeTrackerToolWindow implements Runnable {
 
     public static final String TOOLWINDOW_ID = "Timetracker";
+
+    private ToolWindow baseWindow;
 
     //region GUI components
     private JLabel labelCurrentTrackItemId;
@@ -103,6 +106,7 @@ public class TimeTrackerToolWindow implements Runnable {
             return;
         }
         instance = this;
+        baseWindow = toolWindow;
         Project[] projects = ProjectManager.getInstance().getOpenProjects();
         for (Project project : projects) {
             MessageBus messageBus = project.getMessageBus();
@@ -160,12 +164,16 @@ public class TimeTrackerToolWindow implements Runnable {
         } catch (ComErrorException e) {
             String logErrorMessage = "Timetracker encountered a communication error.\n";
             NotificationManager.sendWarningNotification("Communication Error",
-                    "Timetracker encountered a communication error. For details please see intellij Logs");
+                    "Timetracker encountered a communication error. For details please see IntelliJ Logs.");
             if (e.getError() != null) {
                 log.info(logErrorMessage + e.getError());
             } else {
                 log.info(logErrorMessage + e.getMessage());
             }
+        } catch (ComParseException e) {
+            NotificationManager.sendWarningNotification("Response Parse Error",
+                    "Failed to parse 7pace response. For details please see IntelliJ Logs.");
+            log.info("Failed to parse response from sevenpace server", e);
         } catch (CommunicatorException e) {
             e.printStackTrace();
         }
@@ -331,10 +339,12 @@ public class TimeTrackerToolWindow implements Runnable {
             if (TimeTrackingState.tracking.equals(currentState.getTrack().getTrackingState())) {
                 buttonResumeStopTracking.setIcon(Icon.STOP.getIcon());
                 buttonResumeStopTracking.setText("Stop Tracking");
+                baseWindow.setIcon(Icon.APP_ICON_ACTIVE_DARK.getIcon());
             } else {
                 buttonResumeStopTracking.setIcon(Icon.START.getIcon());
                 buttonResumeStopTracking.setText("Resume Tracking");
                 textFieldSelectedWorkItem.setText(currentState.getTrack().getWorkItem().getId().toString());
+                baseWindow.setIcon(Icon.APP_ICON_DARK.getIcon());
             }
             refreshTables();
             contentPanel.repaint();

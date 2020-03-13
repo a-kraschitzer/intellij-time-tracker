@@ -6,5 +6,6 @@ import lombok.Data;
 public class TimetrackerResponse {
 
     private Error error;
+    private String Message;
 
 }
