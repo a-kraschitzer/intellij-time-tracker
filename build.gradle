@@ -41,11 +41,16 @@ dependencies {
 
 }
 
+publishPlugin {
+    token = System.getenv("ORG_GRADLE_PROJECT_intellijPublishToken")
+}
+
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
     version '2019.3'
 }
 patchPluginXml {
     changeNotes """
+        beta 0.9 small bug fixes
       """
 }

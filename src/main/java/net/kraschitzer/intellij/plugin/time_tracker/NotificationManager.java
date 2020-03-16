@@ -26,7 +26,7 @@ public class NotificationManager {
     public static void sendSettingNotification(String msg) {
         ApplicationManager.getApplication().invokeLater(() -> {
             Notification notification = DEFAULT_NOTIFICATION_GROUP
-                    .createNotification(msg, "Go to Settings to generate a PIN and link with your 7Pace Server!</html>",
+                    .createNotification(msg, "Go to Settings to generate a PIN and link with your 7pace Timetracker Server!</html>",
                             NotificationType.ERROR,
                             new NotificationListener.UrlOpeningListener(true))
                     .addAction(new NotificationAction("Settings") {

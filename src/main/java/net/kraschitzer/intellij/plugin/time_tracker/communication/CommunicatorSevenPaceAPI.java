@@ -251,6 +251,7 @@ public class CommunicatorSevenPaceAPI implements ICommunicator {
         }
         Response response = in.invoke();
         if (response != null && response.getStatus() - 200 < 100) {
+            response.bufferEntity();
             try {
                 return response.readEntity(responseType);
             } catch (ProcessingException e) {
@@ -263,6 +264,9 @@ public class CommunicatorSevenPaceAPI implements ICommunicator {
                 throw new ComErrorParseException("Response was null.");
             }
             response.bufferEntity();
+            if (response.getEntity() == null) {
+                throw new ComErrorParseException("Response entity was null.");
+            }
             try {
                 throw new ComErrorException(response.readEntity(TimetrackerResponse.class).getError());
             } catch (ProcessingException e) {

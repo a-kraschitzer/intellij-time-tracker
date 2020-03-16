@@ -31,7 +31,7 @@ public class PINDialog extends DialogWrapper {
     }
 
     public void setValidated() {
-        pinField.setText("Successfully connected to 7Pace server!");
+        pinField.setText("Successfully connected to 7pace Timetracker server!");
         setCancelButtonText("OK");
     }
 

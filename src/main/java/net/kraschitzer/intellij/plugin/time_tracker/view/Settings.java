@@ -92,7 +92,7 @@ public class Settings implements Configurable {
     @Nls(capitalization = Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
-        return "TimeTracker (7Pace)";
+        return "Time Tracker (using 7pace api)";
     }
 
     @Nullable
@@ -159,7 +159,7 @@ public class Settings implements Configurable {
         try {
             pin = communicator.pinCreate();
         } catch (ComHostNotFoundException e) {
-            setError("The given host does not support 7pace PIN creation!");
+            setError("The given host does not support 7pace Timetracker PIN creation!");
             return;
         } catch (ComHostUnknownException e) {
             setError("The given url '" + url + "' is invalid!");

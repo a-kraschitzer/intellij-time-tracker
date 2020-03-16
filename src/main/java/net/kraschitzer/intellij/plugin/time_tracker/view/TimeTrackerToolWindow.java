@@ -173,7 +173,7 @@ public class TimeTrackerToolWindow implements Runnable {
         } catch (ComParseException e) {
             NotificationManager.sendWarningNotification("Response Parse Error",
                     "Failed to parse 7pace response. For details please see IntelliJ Logs.");
-            log.info("Failed to parse response from sevenpace server", e);
+            log.info("Failed to parse response from the 7pace server", e);
         } catch (CommunicatorException e) {
             e.printStackTrace();
         }
@@ -221,21 +221,27 @@ public class TimeTrackerToolWindow implements Runnable {
             }
         });
         table.addMouseListener((MouseClickListener) e -> {
-            String selectedWorkItemId = table.getValueAt(table.getSelectedRow(), 1).toString();
+            int selectedColumn = table.getSelectedColumn();
+            int selectedRow = table.getSelectedRow();
+            if (selectedColumn < 0 || selectedColumn > table.getColumnCount()
+                    || selectedRow < 0 || selectedRow > table.getRowCount()) {
+                return;
+            }
+            String selectedWorkItemId = table.getValueAt(selectedRow, 1).toString();
             textFieldSelectedWorkItem.setText(selectedWorkItemId);
 
-            if (table.getSelectedColumn() == 0) {
+            if (selectedColumn == 0) {
                 if (favourites.ids.contains(selectedWorkItemId)) {
                     favourites.removeFavourite(selectedWorkItemId);
-                    table.setValueAt(Icon.STAR_EMPTY.getIcon(), table.getSelectedRow(), table.getSelectedColumn());
+                    table.setValueAt(Icon.STAR_EMPTY.getIcon(), selectedRow, selectedColumn);
                 } else {
                     favourites.addFavourite(selectedWorkItemId,
-                            table.getValueAt(table.getSelectedRow(), 3).toString(),
-                            table.getValueAt(table.getSelectedRow(), 4).toString());
-                    table.setValueAt(Icon.STAR.getIcon(), table.getSelectedRow(), table.getSelectedColumn());
+                            table.getValueAt(selectedRow, 3).toString(),
+                            table.getValueAt(selectedRow, 4).toString());
+                    table.setValueAt(Icon.STAR.getIcon(), selectedRow, selectedColumn);
                 }
             }
-            if (table.getSelectedColumn() == 4) {
+            if (selectedColumn == 4) {
                 openURL(table);
             }
         });
