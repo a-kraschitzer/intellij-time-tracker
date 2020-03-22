@@ -43,7 +43,10 @@ public class EventHandler implements BranchChangeListener, BulkFileListener, Fil
 
     @Override
     public void branchHasChanged(@NotNull String branchName) {
-        SwingUtilities.invokeLater(() -> TimeTrackerToolWindow.getInstance().startTrackOnBranchUpdate(branchName));
+        TimeTrackerToolWindow toolWindow = TimeTrackerToolWindow.getInstance();
+        if (toolWindow != null) {
+            SwingUtilities.invokeLater(() -> toolWindow.startTrackOnBranchUpdate(branchName));
+        }
     }
 
     @Override

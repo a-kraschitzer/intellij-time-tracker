@@ -92,7 +92,7 @@ public class Settings implements Configurable {
     @Nls(capitalization = Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
-        return "Time Tracker (using 7pace api)";
+        return "Interface for 7pace Timetracker";
     }
 
     @Nullable

@@ -1,6 +1,6 @@
 <idea-plugin url="https://github.com/a-kraschitzer/intellij-time-tracker">
     <id>net.kraschitzer.intellij.plugin.time_tracker.intellij-time-tracker</id>
-    <name>Time Tracker (using 7pace api)</name>
+    <name>Interface for 7pace Timetracker</name>
     <vendor url="https://github.com/a-kraschitzer">Andreas Kraschitzer</vendor>
 
     <description>
@@ -12,7 +12,7 @@
         ]]>
     </description>
 
-    <version>beta-0.9</version>
+    <version>beta-0.8</version>
     <idea-version since-build="193.6015.39"/>
 
     <depends>com.intellij.modules.platform</depends>

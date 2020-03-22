@@ -162,18 +162,25 @@ public class TimeTrackerToolWindow implements Runnable {
             NotificationManager.sendSettingNotification("Communicator not initialized.");
             log.info("Communicator hasn't been initialized.");
         } catch (ComErrorException e) {
+            String notificationMessage = "";
             String logErrorMessage = "Timetracker encountered a communication error.\n";
-            NotificationManager.sendWarningNotification("Communication Error",
-                    "Timetracker encountered a communication error. For details please see IntelliJ Logs.");
             if (e.getError() != null) {
-                log.info(logErrorMessage + e.getError());
+                if (e.getError().getMessage() != null) {
+                    notificationMessage = notificationMessage + "message: " + e.getError().getMessage() + "\n";
+                    logErrorMessage += e.getError() + "\n";
+                }
             } else {
-                log.info(logErrorMessage + e.getMessage());
+                if (e.getMessage() != null) {
+                    notificationMessage = notificationMessage + "message: " + e.getMessage() + "\n";
+                    logErrorMessage += e.getMessage() + "\n";
+                }
             }
+            log.info(logErrorMessage);
+            NotificationManager.sendWarningNotification("Timetracker encountered a communication error", notificationMessage);
         } catch (ComParseException e) {
             NotificationManager.sendWarningNotification("Response Parse Error",
-                    "Failed to parse 7pace response. For details please see IntelliJ Logs.");
-            log.info("Failed to parse response from the 7pace server", e);
+                    "Failed to parse 7pace Timetracker response. For details please see IntelliJ Logs.");
+            log.info("Failed to parse response from 7pace Timetracker server", e);
         } catch (CommunicatorException e) {
             e.printStackTrace();
         }
@@ -221,27 +228,21 @@ public class TimeTrackerToolWindow implements Runnable {
             }
         });
         table.addMouseListener((MouseClickListener) e -> {
-            int selectedColumn = table.getSelectedColumn();
-            int selectedRow = table.getSelectedRow();
-            if (selectedColumn < 0 || selectedColumn > table.getColumnCount()
-                    || selectedRow < 0 || selectedRow > table.getRowCount()) {
-                return;
-            }
-            String selectedWorkItemId = table.getValueAt(selectedRow, 1).toString();
+            String selectedWorkItemId = table.getValueAt(table.getSelectedRow(), 1).toString();
             textFieldSelectedWorkItem.setText(selectedWorkItemId);
 
-            if (selectedColumn == 0) {
+            if (table.getSelectedColumn() == 0) {
                 if (favourites.ids.contains(selectedWorkItemId)) {
                     favourites.removeFavourite(selectedWorkItemId);
-                    table.setValueAt(Icon.STAR_EMPTY.getIcon(), selectedRow, selectedColumn);
+                    table.setValueAt(Icon.STAR_EMPTY.getIcon(), table.getSelectedRow(), table.getSelectedColumn());
                 } else {
                     favourites.addFavourite(selectedWorkItemId,
-                            table.getValueAt(selectedRow, 3).toString(),
-                            table.getValueAt(selectedRow, 4).toString());
-                    table.setValueAt(Icon.STAR.getIcon(), selectedRow, selectedColumn);
+                            table.getValueAt(table.getSelectedRow(), 3).toString(),
+                            table.getValueAt(table.getSelectedRow(), 4).toString());
+                    table.setValueAt(Icon.STAR.getIcon(), table.getSelectedRow(), table.getSelectedColumn());
                 }
             }
-            if (selectedColumn == 4) {
+            if (table.getSelectedColumn() == 4) {
                 openURL(table);
             }
         });
