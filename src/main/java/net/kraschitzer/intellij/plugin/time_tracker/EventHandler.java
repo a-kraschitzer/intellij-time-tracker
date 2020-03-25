@@ -1,5 +1,6 @@
 package net.kraschitzer.intellij.plugin.time_tracker;
 
+import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent;
 import com.intellij.openapi.fileEditor.FileEditorManagerListener;
@@ -8,6 +9,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.newvfs.BulkFileListener;
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent;
 import lombok.extern.slf4j.Slf4j;
+import net.kraschitzer.intellij.plugin.time_tracker.persistence.SettingsState;
 import net.kraschitzer.intellij.plugin.time_tracker.view.TimeTrackerToolWindow;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,7 +20,8 @@ import java.time.temporal.ChronoUnit;
 @Slf4j
 public class EventHandler implements BranchChangeListener, BulkFileListener, FileEditorManagerListener {
 
-    private static final long ACTION_DELAY = 1;
+    private SettingsState settings = ServiceManager.getService(SettingsState.class);
+
     private static EventHandler instance;
 
     public static EventHandler getInstance() {
@@ -28,7 +31,7 @@ public class EventHandler implements BranchChangeListener, BulkFileListener, Fil
         return instance;
     }
 
-    private LocalDateTime latestActionTimeStamp = LocalDateTime.now();
+    private LocalDateTime latestDialogTimestamp = LocalDateTime.MIN;
 
     public EventHandler() {
         log.info("Created instance of EventHandler");
@@ -70,13 +73,13 @@ public class EventHandler implements BranchChangeListener, BulkFileListener, Fil
     }
 
     private void distillAction() {
-        if (latestActionTimeStamp.plus(ACTION_DELAY, ChronoUnit.SECONDS).isBefore(LocalDateTime.now())) {
+        if (latestDialogTimestamp.plus(settings.autoStartDialogBreak, ChronoUnit.SECONDS).isBefore(LocalDateTime.now())) {
             TimeTrackerToolWindow tracker = TimeTrackerToolWindow.getInstance();
             if (tracker != null) {
                 SwingUtilities.invokeLater(tracker::handleAction);
             }
+            latestDialogTimestamp = LocalDateTime.now();
         }
-        latestActionTimeStamp = LocalDateTime.now();
     }
 
 }

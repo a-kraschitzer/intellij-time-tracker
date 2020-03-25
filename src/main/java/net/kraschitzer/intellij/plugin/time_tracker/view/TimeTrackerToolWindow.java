@@ -46,12 +46,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
 public class TimeTrackerToolWindow implements Runnable {
 
     public static final String TOOLWINDOW_ID = "Timetracker";
+    public static final Pattern BRANCH_NAME_PATTERN = Pattern.compile("[a-zA-Z]+/(\\d+)_\\w+");
 
     private ToolWindow baseWindow;
 
@@ -513,24 +516,30 @@ public class TimeTrackerToolWindow implements Runnable {
         try {
             if (currentState != null) {
                 final String workItemIdString;
-                workItemIdString = branchName.split("/")[1].split("_")[0];
-                if (StartTrackingBehaviour.DIALOG.equals(settings.branchCheckoutBehaviour) && !dialogOpen) {
-                    StartTrackingDialog dialog = new StartTrackingDialog("Start Tracking on Branch Work Item?",
-                            "Start tracking of the work item linked to the checked out branch?",
-                            workItemIdString, currentState.getSettings().getActivityType());
-                    dialogOpen = true;
-                    if (dialog.showAndGet()) {
-                        SwingUtilities.invokeLater(() -> startTracking(dialog.getWorkItemId(), dialog.getSelectedActivityType()));
+                Matcher matcher = BRANCH_NAME_PATTERN.matcher(branchName);
+                if (matcher.matches()) {
+                    workItemIdString = matcher.group(1);
+                    if (StartTrackingBehaviour.DIALOG.equals(settings.branchCheckoutBehaviour) && !dialogOpen) {
+                        StartTrackingDialog dialog = new StartTrackingDialog("Start Tracking on Branch Work Item?",
+                                "Start tracking of the work item linked to the checked out branch?",
+                                workItemIdString, currentState.getSettings().getActivityType());
+                        dialogOpen = true;
+                        if (dialog.showAndGet()) {
+                            SwingUtilities.invokeLater(() -> startTracking(dialog.getWorkItemId(), dialog.getSelectedActivityType()));
+                        }
+                        dialogOpen = false;
+                        dialogLastClosed = LocalDateTime.now();
+                    } else if (StartTrackingBehaviour.AUTO_TRACK.equals(settings.branchCheckoutBehaviour)) {
+                        try {
+                            SwingUtilities.invokeLater(() -> startTracking(Integer.parseInt(workItemIdString)));
+                        } catch (Exception ex) {
+                            NotificationManager.sendToolWindowNotification("Failed to auto start tracking", "invalid branch name");
+                            log.info("Failed to parse branchName '" + branchName + "' with exception: " + ex.getMessage());
+                        }
                     }
-                    dialogOpen = false;
-                    dialogLastClosed = LocalDateTime.now();
-                } else if (StartTrackingBehaviour.AUTO_TRACK.equals(settings.branchCheckoutBehaviour)) {
-                    try {
-                        SwingUtilities.invokeLater(() -> startTracking(Integer.parseInt(workItemIdString)));
-                    } catch (Exception ex) {
-                        NotificationManager.sendToolWindowNotification("Failed to auto start tracking", "invalid branch name");
-                        log.info("Failed to parse branchName '" + branchName + "' with exception: " + ex.getMessage());
-                    }
+                } else {
+                    NotificationManager.sendToolWindowNotification("Failed to automatically start tracking", "Invalid branch name '" + branchName + "'");
+                    log.info("Failed to automatically start tracking. Invalid branch name '" + branchName + "'");
                 }
             }
         } catch (Exception e) {

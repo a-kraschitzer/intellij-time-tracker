@@ -37,7 +37,8 @@ public class Settings implements Configurable {
     private JTextField textFieldEmail;
     private JTextField textFieldProjectId;
     private JLabel labelError;
-    private JSpinner spinnerAutoActionDelay;
+    private JSpinner spinnerAutoStopDelay;
+    private JSpinner spinnerAutoStartDialogBreak;
     private JCheckBox checkBoxEnableAutoStop;
 
     private final ICommunicator communicator;
@@ -56,6 +57,7 @@ public class Settings implements Configurable {
         } catch (Exception ignored) {
             //ignored
         }
+        comboBoxOnActivityBehaviour.addActionListener(e -> spinnerAutoStartDialogBreak.setEnabled(StartTrackingBehaviour.DIALOG.equals(comboBoxOnActivityBehaviour.getSelectedItem())));
     }
 
     public void initializeComponents() {
@@ -84,7 +86,9 @@ public class Settings implements Configurable {
         });
         url = settings.url;
         textFieldUrl.setText(url != null ? url : "");
-        spinnerAutoActionDelay.setValue(settings.autoStopActionDelay);
+        spinnerAutoStopDelay.setValue(settings.autoStopActionDelay);
+        spinnerAutoStartDialogBreak.setValue(settings.autoStartDialogBreak);
+        spinnerAutoStartDialogBreak.setEnabled(settings.onActivityBehaviour.equals(StartTrackingBehaviour.DIALOG));
         checkBoxEnableAutoStop.setSelected(settings.autoStop);
     }
 
@@ -106,7 +110,8 @@ public class Settings implements Configurable {
         return (!textFieldUrl.getText().equals(url)
                 || !settings.branchCheckoutBehaviour.equals(comboBoxBranchCheckoutBehaviour.getSelectedItem())
                 || !settings.onActivityBehaviour.equals(comboBoxOnActivityBehaviour.getSelectedItem())
-                || settings.autoStopActionDelay != (int) spinnerAutoActionDelay.getValue()
+                || settings.autoStopActionDelay != (int) spinnerAutoStopDelay.getValue()
+                || settings.autoStartDialogBreak != (int) spinnerAutoStartDialogBreak.getValue()
                 || settings.autoStop != checkBoxEnableAutoStop.isSelected()
         );
     }
@@ -133,7 +138,8 @@ public class Settings implements Configurable {
         settings.url = url;
         settings.branchCheckoutBehaviour = (StartTrackingBehaviour) comboBoxBranchCheckoutBehaviour.getSelectedItem();
         settings.onActivityBehaviour = (StartTrackingBehaviour) comboBoxOnActivityBehaviour.getSelectedItem();
-        settings.autoStopActionDelay = (Integer) spinnerAutoActionDelay.getValue();
+        settings.autoStopActionDelay = (Integer) spinnerAutoStopDelay.getValue();
+        settings.autoStartDialogBreak = (Integer) spinnerAutoStartDialogBreak.getValue();
         settings.autoStop = checkBoxEnableAutoStop.isSelected();
     }
 

@@ -226,3 +226,5 @@ gradle-app.setting
 **/build/
 
 # End of https://www.gitignore.io/api/java,maven,gradle,eclipse,intellij,netbeans
+/.idea/modules.xml
+/.idea/intellij-time-tracker.iml

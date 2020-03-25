@@ -20,6 +20,7 @@ public class SettingsState implements PersistentStateComponent<SettingsState> {
     public StartTrackingBehaviour branchCheckoutBehaviour = StartTrackingBehaviour.DIALOG;
     public StartTrackingBehaviour onActivityBehaviour = StartTrackingBehaviour.OFF;
     public int autoStopActionDelay = 300;
+    public int autoStartDialogBreak = 300;
     public boolean autoStop = true;
 
     public SettingsState() {
