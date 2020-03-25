@@ -24,8 +24,3 @@ jobs:
         run: chmod +x gradlew
       - name: Build with Gradle
         run: ./gradlew buildPlugin
-      - name: Publish Artifact
-        uses: actions/upload-artifact@v1
-        with:
-          name: plugin
-          path: build/distributions/intellij-time-tracker.zip
