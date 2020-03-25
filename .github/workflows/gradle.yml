@@ -24,3 +24,12 @@ jobs:
         run: chmod +x gradlew
       - name: Build with Gradle
         run: ./gradlew buildPlugin
+      - name: get filename of jar
+        run: echo "::set-env name=JAR_FILE::$(ls build/distributions/ | head -c -5)-$(git log --pretty=format:%h -n 1).jar"
+      - name: rename plugin
+        run: mv build/distributions/$(ls build/distributions/) build/distributions/${{ env.JAR_FILE }}
+      - name: Publish Artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: plugin-container
+          path: build/distributions/${{ env.JAR_FILE }}
