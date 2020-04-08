@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'net.kraschitzer.intellij.plugin.time-tracker'
-version 'beta-0.10'
+version 'beta-0.11'
 
 sourceCompatibility = 1.8
 
@@ -52,6 +52,9 @@ intellij {
 }
 patchPluginXml {
     changeNotes """
+        <br>beta-0.11
+        <br>fix NPE, improve debug logging
+        <br> 
         <br>beta-0.10
         <br>finalizing name, start-on-activity dialog break, bug fixes
         <br> 
