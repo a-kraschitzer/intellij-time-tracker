@@ -337,7 +337,7 @@ public class TimeTrackerToolWindow implements Runnable {
     }
 
     private void updateCurrentTrackedItem() {
-        if (currentState != null) {
+        if (currentState != null && currentState.getTrack() != null && currentState.getTrack().getWorkItem() != null) {
             String completeUrl = currentState.getTrack().getWorkItem().getWorkItemLink();
             workItemUrlBase = completeUrl.substring(0, completeUrl.lastIndexOf('/') + 1);
             labelCurrentTrackItemId.setText(String.valueOf(currentState.getTrack().getWorkItem().getId()));
