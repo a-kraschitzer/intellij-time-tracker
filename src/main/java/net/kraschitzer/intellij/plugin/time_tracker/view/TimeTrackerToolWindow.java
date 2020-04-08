@@ -165,6 +165,7 @@ public class TimeTrackerToolWindow implements Runnable {
             NotificationManager.sendSettingNotification("Communicator not initialized.");
             log.info("Communicator hasn't been initialized.");
         } catch (ComErrorException e) {
+            log.debug("ComError in refresh action", e);
             String notificationMessage = "";
             String logErrorMessage = "Timetracker encountered a communication error.\n";
             if (e.getError() != null) {
@@ -181,11 +182,12 @@ public class TimeTrackerToolWindow implements Runnable {
             log.info(logErrorMessage);
             NotificationManager.sendWarningNotification("Timetracker encountered a communication error", notificationMessage);
         } catch (ComParseException e) {
+            log.debug("Failed to parse response from 7pace Timetracker server", e);
             NotificationManager.sendWarningNotification("Response Parse Error",
                     "Failed to parse 7pace Timetracker response. For details please see IntelliJ Logs.");
-            log.info("Failed to parse response from 7pace Timetracker server", e);
+            log.info("Failed to parse response from 7pace Timetracker server '{}'", e.getMessage());
         } catch (CommunicatorException e) {
-            e.printStackTrace();
+            log.debug("Communication error in refresh action", e);
         }
     }
 
@@ -300,6 +302,7 @@ public class TimeTrackerToolWindow implements Runnable {
         try {
             logs = communicator.getLatestWorkLogs(15);
         } catch (CommunicatorException e) {
+            log.debug("Communication Exception in load recent items", e);
             return;
         }
 
@@ -414,8 +417,8 @@ public class TimeTrackerToolWindow implements Runnable {
                 currentState.getTrack().setTrackingState(stopState.getTrack().getTrackingState());
                 NotificationManager.sendToolWindowNotification("Tracking stopped", "");
             } catch (CommunicatorException ex) {
+                log.debug("Communication Exception in stop tracking", e);
                 currentState = null;
-                ex.printStackTrace();
                 return;
             }
         } else {
@@ -426,8 +429,8 @@ public class TimeTrackerToolWindow implements Runnable {
                         .tfsId(currentState.getTrack().getTfsId())
                         .build());
             } catch (CommunicatorException ex) {
+                log.debug("Communication Exception in resume tracking", e);
                 currentState = null;
-                ex.printStackTrace();
                 return;
             }
         }
@@ -440,6 +443,7 @@ public class TimeTrackerToolWindow implements Runnable {
             SearchResultModel searchResultModel = communicator.searchWorkItemByModel(textFieldSearchWorkItems.getText());
             loadSearchResults(searchResultModel);
         } catch (CommunicatorException e) {
+            log.debug("Communication Exception in work item search", e);
             NotificationManager.sendToolWindowNotification("Error during search", "");
             log.info("Failed to search for work items with search term '{}', with exception '{}'", textFieldSearchWorkItems.getText(), e.getMessage());
         }
@@ -460,7 +464,7 @@ public class TimeTrackerToolWindow implements Runnable {
                 Desktop.getDesktop().browse(new URI(workItemUrlBase + itemId));
             }
         } catch (Exception ex) {
-            log.debug("Failed to open external work item link for id '" + currentState.getTrack().getWorkItem().getId() + "' with error: " + ex.getMessage());
+            log.debug("Failed to open external work item link for id '{}' with error: {}", currentState.getTrack().getWorkItem().getId(), ex.getMessage(), ex);
         }
     }
 
@@ -491,6 +495,7 @@ public class TimeTrackerToolWindow implements Runnable {
             updateCurrentTrackedItem();
             NotificationManager.sendToolWindowNotification("Started tracking of " + selectedWorkItemId, "");
         } catch (CommunicatorException e) {
+            log.debug("Communication Exception in start tracking ow work item", e);
             log.info("Failed to start tracking of work item with id {}; error: {}", selectedWorkItemId, e.getMessage());
         }
     }
@@ -543,6 +548,7 @@ public class TimeTrackerToolWindow implements Runnable {
                 }
             }
         } catch (Exception e) {
+            log.debug("Exception in auto start on branch change", e);
             NotificationManager.sendToolWindowNotification("Failed to automatically start tracking", "No work item selected.");
             log.info("no work item id was selected when tracking was started automatically.");
         }
@@ -589,8 +595,8 @@ public class TimeTrackerToolWindow implements Runnable {
                 log.info("Stopping currently tracked task");
                 SwingUtilities.invokeLater(() -> resumeStopTrackingCurrent(null, Reason.STOPPED_BY_MACHINE));
             }
-        } catch (Exception ex) {
-            log.warn("Encountered exception in scheduled task: {}", ex.getMessage());
+        } catch (Exception e) {
+            log.debug("Exception in scheduled task", e);
         }
         log.info("Exiting scheduled task");
     }
