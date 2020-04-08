@@ -124,7 +124,7 @@ public class Settings implements Configurable {
         try {
             communicator.initialize();
         } catch (CommunicatorException e) {
-            setError("Failed to initialize communicator.");
+            setError("Failed to initialize communicator.", e);
         }
     }
 
@@ -154,10 +154,10 @@ public class Settings implements Configurable {
             communicator.resetInitialization();
             communicator.initialize();
         } catch (ConfigurationException e) {
-            setError("The given url '" + url + "' is invalid!");
+            setError("The given url '" + url + "' is invalid!", e);
             return;
         } catch (CommunicatorException e) {
-            setError("Failed to initialize communicator.");
+            setError("Failed to initialize communicator.", e);
             return;
         }
 
@@ -165,13 +165,13 @@ public class Settings implements Configurable {
         try {
             pin = communicator.pinCreate();
         } catch (ComHostNotFoundException e) {
-            setError("The given host does not support 7pace Timetracker PIN creation!");
+            setError("The given host does not support 7pace Timetracker PIN creation!", e);
             return;
         } catch (ComHostUnknownException e) {
-            setError("The given url '" + url + "' is invalid!");
+            setError("The given url '" + url + "' is invalid!", e);
             return;
         } catch (CommunicatorException e) {
-            setError("Failed to create PIN.");
+            setError("Failed to create PIN.", e);
             return;
         }
         final PINDialog dialog = new PINDialog(pin.getPin(), url.split(".timehub.7pace.com")[0]);
@@ -181,12 +181,14 @@ public class Settings implements Configurable {
                 try {
                     Thread.sleep(500);
                     status = communicator.pinStatus(pin.getSecret());
+                    log.debug("Checked pin status with result: {}", status.getStatus());
                 } catch (InterruptedException e) {
                     break;
                 }
             }
 
             if (Thread.currentThread().isInterrupted()) {
+                log.debug("Check thread was interrupted. (The pin dialog was probably closed)");
                 return;
             }
 
@@ -194,8 +196,9 @@ public class Settings implements Configurable {
                 final Token token;
                 try {
                     token = communicator.token(pin.getSecret());
+                    log.debug("Successfully retrieved token {}", token.getAccess_token().substring(0, 10));
                 } catch (CommunicatorException e) {
-                    setError("Failed to generate token, please try again.");
+                    setError("Failed to generate token, please try again.", e);
                     return;
                 }
                 settings.accessToken = token.getAccess_token();
@@ -223,7 +226,7 @@ public class Settings implements Configurable {
                 infoPanel.setVisible(false);
             }
         } catch (CommunicatorException e) {
-            log.debug("Failed to populate user information, {}", e.getMessage());
+            log.debug("Failed to populate user information, {}", e);
             infoPanel.setVisible(false);
         }
     }
@@ -232,7 +235,8 @@ public class Settings implements Configurable {
         settings.clear();
     }
 
-    private void setError(String msg) {
+    private void setError(String msg, Exception e) {
+        log.debug(msg, e);
         labelError.setText(msg);
     }
 
